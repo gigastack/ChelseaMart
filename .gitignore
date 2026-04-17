@@ -4,10 +4,10 @@ graphify-out/
 .graphify_*.json
 .graphify_python
 skills/
-docs/superpowers/
 
 # Agent specific
 .agent/
+.worktrees/
 
 # Standard ignores
 node_modules/
