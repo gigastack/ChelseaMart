@@ -1,0 +1,15 @@
+# Graphify specific
+.graphify/
+graphify-out/
+.graphify_*.json
+.graphify_python
+skills/
+docs/superpowers/
+
+# Agent specific
+.agent/
+
+# Standard ignores
+node_modules/
+.DS_Store
+Thumbs.db
