@@ -15,6 +15,7 @@ These rules apply to files under `lib/`.
 - Preserve ELIM source linkage and source payload snapshots for API-linked products.
 - Never silently overwrite live product content from automated jobs.
 - Model buyer and consignee separately.
+- Do not retain runtime compatibility fallbacks once the hosted schema and seeded real data are available.
 
 ## framework boundaries
 

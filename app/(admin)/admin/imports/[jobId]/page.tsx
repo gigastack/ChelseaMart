@@ -1,6 +1,7 @@
 import { ImportLogPanel } from "@/components/admin/import-log-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getImportJobActivity, listImportJobs } from "@/lib/imports/repository";
 
 type ImportJobDetailPageProps = {
   params: Promise<{
@@ -8,15 +9,10 @@ type ImportJobDetailPageProps = {
   }>;
 };
 
-const lines = [
-  "QUEUE_ACCEPTED :: 130 entries",
-  "FETCHED_SOURCE :: source-1",
-  "DRAFT_CREATED :: product-1",
-  "SOURCE_UNAVAILABLE :: source-9",
-];
-
 export default async function AdminImportJobDetailPage({ params }: ImportJobDetailPageProps) {
   const { jobId } = await params;
+  const [jobs, lines] = await Promise.all([listImportJobs(), getImportJobActivity(jobId)]);
+  const job = jobs.find((item) => item.id === jobId);
 
   return (
     <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
@@ -38,28 +34,28 @@ export default async function AdminImportJobDetailPage({ params }: ImportJobDeta
           <Card>
             <CardHeader>
               <CardDescription>Job summary</CardDescription>
-              <CardTitle>Bulk URL import</CardTitle>
+              <CardTitle>{job?.mode ?? "Import job"}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[rgb(var(--text-secondary))]">Queued</p>
-                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">130</p>
+                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">{job?.queuedCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[rgb(var(--text-secondary))]">Imported</p>
-                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">108</p>
+                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">{job?.importedCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[rgb(var(--text-secondary))]">Duplicate</p>
-                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">12</p>
+                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">{job?.duplicateCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[rgb(var(--text-secondary))]">Failed</p>
-                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">4</p>
+                <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text-primary))]">{job?.failedCount ?? 0}</p>
               </div>
             </CardContent>
           </Card>
-          <ImportLogPanel lines={lines} />
+          <ImportLogPanel lines={lines.length ? lines : ["No activity yet."]} />
         </section>
       </div>
     </main>

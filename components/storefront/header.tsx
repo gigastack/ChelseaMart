@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { ShoppingBag, UserCircle2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { SignOutForm } from "@/components/storefront/sign-out-form";
+import type { UserAccess } from "@/lib/auth/access";
+import { getCurrentUserAccess } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,7 +14,23 @@ const navItems = [
   { href: "/account/orders", label: "Orders" },
 ];
 
-export function StorefrontHeader() {
+type StorefrontHeaderViewProps = {
+  access: UserAccess;
+  signOutControl?: ReactNode;
+};
+
+export async function StorefrontHeader() {
+  const access = await getCurrentUserAccess();
+
+  return (
+    <StorefrontHeaderView
+      access={access}
+      signOutControl={<SignOutForm size="sm" variant="ghost" />}
+    />
+  );
+}
+
+export function StorefrontHeaderView({ access, signOutControl }: StorefrontHeaderViewProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-[rgb(var(--border-subtle))] bg-[rgba(var(--surface-card),0.92)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-4 lg:px-12">
@@ -33,11 +53,28 @@ export function StorefrontHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-3">
           <Badge className="hidden sm:inline-flex">NGN / USD</Badge>
-          <Link className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "px-2")} href="/auth/sign-in">
-            <UserCircle2 className="size-4" />
-            <span className="sr-only">Sign in</span>
-          </Link>
-          <Link className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "px-2")} href="/cart">
+          {access.isAdmin ? (
+            <Link className={cn(buttonVariants({ variant: "secondary", size: "sm" }))} href="/admin">
+              Admin
+            </Link>
+          ) : null}
+          {access.isAuthenticated ? (
+            <>
+              <Link className={cn(buttonVariants({ variant: "ghost", size: "sm" }))} href="/account/orders">
+                Account
+              </Link>
+              {signOutControl ?? (
+                <Button size="sm" type="button" variant="ghost">
+                  Sign out
+                </Button>
+              )}
+            </>
+          ) : (
+            <Link className={cn(buttonVariants({ variant: "ghost", size: "sm" }))} href="/auth/sign-in">
+              Sign in
+            </Link>
+          )}
+          <Link aria-label="Cart" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "px-2")} href="/cart">
             <ShoppingBag className="size-4" />
             <span className="sr-only">Cart</span>
           </Link>

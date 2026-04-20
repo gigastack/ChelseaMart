@@ -45,7 +45,7 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
               </CardContent>
             </Card>
           </div>
-          <OrderStatusPanel status={order.status} />
+          <OrderStatusPanel orderId={order.id} status={order.status} />
         </div>
       </div>
     </main>

@@ -1,7 +1,10 @@
+export type ProfileRole = "admin" | "customer";
+
 export type UserAccess = {
   email: string | null;
   isAdmin: boolean;
   isAuthenticated: boolean;
+  role: ProfileRole | null;
 };
 
 export function normalizeEmail(email?: string | null) {
@@ -9,23 +12,32 @@ export function normalizeEmail(email?: string | null) {
   return trimmed ? trimmed : null;
 }
 
-export function isAdminEmail(email: string | null | undefined, adminEmails: string[]) {
-  const normalizedEmail = normalizeEmail(email);
-  return normalizedEmail ? adminEmails.includes(normalizedEmail) : false;
+export function parseProfileRole(value?: string | null): ProfileRole | null {
+  if (value === "admin" || value === "customer") {
+    return value;
+  }
+
+  return null;
 }
 
-export function getUserAccess(email: string | null | undefined, adminEmails: string[]): UserAccess {
+export function isAdminRole(role: ProfileRole | null | undefined) {
+  return role === "admin";
+}
+
+export function getUserAccess(email: string | null | undefined, role: ProfileRole | null | undefined): UserAccess {
   const normalizedEmail = normalizeEmail(email);
+  const normalizedRole = parseProfileRole(role);
 
   return {
     email: normalizedEmail,
-    isAdmin: isAdminEmail(normalizedEmail, adminEmails),
+    isAdmin: isAdminRole(normalizedRole),
     isAuthenticated: Boolean(normalizedEmail),
+    role: normalizedRole,
   };
 }
 
-export function assertAdminEmail(email: string | null | undefined, adminEmails: string[]) {
-  if (!isAdminEmail(email, adminEmails)) {
+export function assertAdminRole(role: ProfileRole | null | undefined) {
+  if (!isAdminRole(role)) {
     throw new Error("Admin access is required for this action.");
   }
 }

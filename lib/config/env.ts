@@ -8,11 +8,22 @@ const publicEnvSchema = z.object({
 
 const serverEnvSchema = z.object({
   ADMIN_EMAILS: z.string().optional(),
+  DATABASE_URL: z.url().optional(),
+  EMAIL_FROM: z.email().optional(),
+  EMAIL_PROVIDER: z.enum(["smtp", "supabase"]).optional(),
   ELIM_API_BASE_URL: z.url().optional(),
   ELIM_API_KEY: z.string().optional(),
   PAYSTACK_API_BASE_URL: z.url().optional(),
   PAYSTACK_SECRET_KEY: z.string().optional(),
   PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => (value ? value === "true" : undefined)),
+  SMTP_USER: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 });
 
@@ -26,6 +37,18 @@ export type AppEnv = {
   };
   server: {
     adminEmails: string[];
+    databaseUrl?: string;
+    email: {
+      from?: string;
+      provider: "smtp" | "supabase";
+      smtp?: {
+        host: string;
+        pass?: string;
+        port: number;
+        secure: boolean;
+        user?: string;
+      };
+    };
     elimApiBaseUrl?: string;
     elimApiKey?: string;
     paystackApiBaseUrl?: string;
@@ -55,6 +78,20 @@ function parseServerEnv(input: Record<string, string | undefined>): AppEnv["serv
       serverResult.ADMIN_EMAILS?.split(",")
         .map((email) => email.trim().toLowerCase())
         .filter(Boolean) ?? [],
+    databaseUrl: normalizeOptional(serverResult.DATABASE_URL),
+    email: {
+      from: normalizeOptional(serverResult.EMAIL_FROM),
+      provider: serverResult.EMAIL_PROVIDER ?? "supabase",
+      smtp: serverResult.SMTP_HOST
+        ? {
+            host: serverResult.SMTP_HOST,
+            pass: normalizeOptional(serverResult.SMTP_PASS),
+            port: serverResult.SMTP_PORT ?? 587,
+            secure: serverResult.SMTP_SECURE ?? false,
+            user: normalizeOptional(serverResult.SMTP_USER),
+          }
+        : undefined,
+    },
     elimApiBaseUrl: normalizeOptional(serverResult.ELIM_API_BASE_URL),
     elimApiKey: normalizeOptional(serverResult.ELIM_API_KEY),
     paystackApiBaseUrl: normalizeOptional(serverResult.PAYSTACK_API_BASE_URL),

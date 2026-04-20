@@ -44,8 +44,8 @@ export function StorefrontHomePage({ products }: StorefrontHomePageProps) {
             <Link className={cn(buttonVariants({ variant: "primary" }))} href="/catalog">
               Shop products
             </Link>
-            <Link className={cn(buttonVariants({ variant: "secondary" }))} href="/admin">
-              Open admin
+            <Link className={cn(buttonVariants({ variant: "secondary" }))} href="/search">
+              Search catalog
             </Link>
           </div>
         </div>

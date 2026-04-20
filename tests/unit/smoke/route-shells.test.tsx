@@ -29,6 +29,7 @@ describe("route shells", () => {
 
     expect(screen.getByRole("heading", { name: /curated china sourcing for nigerians/i })).toBeVisible();
     expect(screen.getByRole("link", { name: /shop products/i })).toBeVisible();
+    expect(screen.queryByRole("link", { name: /open admin/i })).not.toBeInTheDocument();
   });
 
   it("renders the admin dashboard shell", () => {

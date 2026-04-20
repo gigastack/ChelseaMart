@@ -4,49 +4,12 @@ import { ImportLogPanel } from "@/components/admin/import-log-panel";
 import { UnavailableProductsTable, type UnavailableProductRow } from "@/components/admin/unavailable-products-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getImportJobActivity, listImportJobs, listUnavailableProducts } from "@/lib/imports/repository";
 
-const jobs: ImportJobRow[] = [
-  {
-    duplicateCount: 12,
-    failedCount: 4,
-    id: "job-1",
-    importedCount: 108,
-    mode: "bulk_url",
-    needsReviewCount: 6,
-    queuedCount: 130,
-    status: "processing",
-  },
-  {
-    duplicateCount: 1,
-    failedCount: 0,
-    id: "job-2",
-    importedCount: 5,
-    mode: "keyword_search",
-    needsReviewCount: 0,
-    queuedCount: 6,
-    status: "completed",
-  },
-];
-
-const unavailableProducts: UnavailableProductRow[] = [
-  {
-    id: "product-2",
-    sourceProductId: "source-down",
-    statusBeforeHide: "live",
-    title: "Unavailable lamp",
-    unavailableSince: "Today",
-  },
-];
-
-const jobLogLines = [
-  "PARSED_URL :: https://detail.1688.com/offer/1.html",
-  "FETCHED_SOURCE :: source-1",
-  "DRAFT_CREATED :: product-1",
-  "DUPLICATE_SKIPPED :: source-2",
-  "IMPORT_FAILED :: source-7 :: timeout",
-];
-
-export default function AdminImportsPage() {
+export default async function AdminImportsPage() {
+  const [jobs, unavailableProducts] = await Promise.all([listImportJobs(), listUnavailableProducts()]);
+  const primaryJob = jobs[0];
+  const jobLogLines = primaryJob ? await getImportJobActivity(primaryJob.id) : ["No import activity yet."];
   return (
     <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -72,7 +35,7 @@ export default function AdminImportsPage() {
               <CardTitle>Queued, imported, duplicate, failed, and review counts</CardTitle>
             </CardHeader>
             <CardContent>
-              <ImportJobTable jobs={jobs} />
+              <ImportJobTable jobs={jobs as ImportJobRow[]} />
             </CardContent>
           </Card>
           <ImportLogPanel lines={jobLogLines} />
@@ -84,7 +47,7 @@ export default function AdminImportsPage() {
             <CardTitle>Products hidden after admin-triggered availability scans</CardTitle>
           </CardHeader>
           <CardContent>
-            <UnavailableProductsTable products={unavailableProducts} />
+            <UnavailableProductsTable products={unavailableProducts as UnavailableProductRow[]} />
           </CardContent>
         </Card>
       </div>

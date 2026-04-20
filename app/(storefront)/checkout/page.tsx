@@ -2,14 +2,16 @@ import { CheckoutExperience } from "@/components/storefront/checkout-experience"
 import { Badge } from "@/components/ui/badge";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { hasSupabaseAuthEnv } from "@/lib/config/env";
-import { listConsignees, listRouteConfigs, listSeedCartItems } from "@/lib/orders/repository";
+import { listCheckoutCartItems, listConsignees, listRouteConfigs } from "@/lib/orders/repository";
 
 export default async function CheckoutPage() {
-  if (hasSupabaseAuthEnv()) {
-    await requireAuthenticatedUser("/auth/sign-in");
-  }
+  const user = hasSupabaseAuthEnv() ? await requireAuthenticatedUser("/checkout") : null;
 
-  const [consignees, routeConfigs] = await Promise.all([listConsignees(), Promise.resolve(listRouteConfigs())]);
+  const [cartItems, consignees, routeConfigs] = await Promise.all([
+    listCheckoutCartItems(),
+    listConsignees(user?.id),
+    listRouteConfigs(),
+  ]);
 
   return (
     <main className="bg-[rgb(var(--surface-base))]">
@@ -18,7 +20,7 @@ export default async function CheckoutPage() {
           <Badge>Checkout</Badge>
           <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Review the NGN total before payment</h1>
         </div>
-        <CheckoutExperience cartItems={listSeedCartItems()} consignees={consignees} routeConfigs={routeConfigs} />
+        <CheckoutExperience cartItems={cartItems} consignees={consignees} routeConfigs={routeConfigs} />
       </section>
     </main>
   );

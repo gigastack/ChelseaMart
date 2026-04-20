@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { getServerEnv } from "@/lib/config/env";
+import { reconcilePaystackPayment } from "@/lib/payments/reconcile-paystack-payment";
+import { resolvePaystackWebhookSecret } from "@/lib/payments/resolve-paystack-webhook-secret";
 import { verifyPaystackWebhook } from "@/lib/payments/verify-paystack-webhook";
 
-const processedWebhookEvents = new Set<string>();
 const allowedEventTypes = new Set(["charge.success", "charge.failed"]);
 
 export async function POST(request: Request) {
-  const secret = getServerEnv().paystackWebhookSecret;
+  const { paystackSecretKey, paystackWebhookSecret } = getServerEnv();
+  const secret = resolvePaystackWebhookSecret({
+    paystackSecretKey,
+    paystackWebhookSecret,
+  });
 
   if (!secret) {
-    return NextResponse.json({ error: "Paystack webhook secret is missing." }, { status: 500 });
+    return NextResponse.json({ error: "Paystack secret key is missing." }, { status: 500 });
   }
 
   const rawBody = await request.text();
@@ -27,12 +32,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, received: false }, { status: 202 });
     }
 
-    const dedupeKey = `${eventType}:${reference}`;
-    if (processedWebhookEvents.has(dedupeKey)) {
-      return NextResponse.json({ ok: true, duplicate: true, received: true });
-    }
+    const transactionStatus =
+      event.data && typeof event.data === "object" && "status" in event.data && typeof event.data.status === "string"
+        ? event.data.status
+        : eventType === "charge.success"
+          ? "success"
+          : "failed";
 
-    processedWebhookEvents.add(dedupeKey);
+    await reconcilePaystackPayment({
+      eventType,
+      note: eventType === "charge.success" ? "Paystack webhook confirmed payment." : "Paystack webhook reported payment failure.",
+      payload: event,
+      paymentReference: reference,
+      transactionStatus,
+    });
 
     return NextResponse.json({ ok: true, received: true, type: eventType });
   } catch (error) {

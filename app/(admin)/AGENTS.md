@@ -6,7 +6,8 @@ These rules apply to files under `app/(admin)/`.
 
 - Admin surfaces should feel like an operational control room.
 - Favor clarity, data density, and fast scanning over decorative layout.
-- Use the same brand kit as storefront, but with tighter spacing and stronger table/grid structure.
+- Use the same token system as storefront, but with tighter spacing, cooler surfaces, stronger table/grid structure, and less accent saturation.
+- Motion in admin should be fast and structural: panel reveals, tab/state transitions, optimistic status changes. No ambient smooth-scroll, floating glass, or hero theatrics.
 
 ## product and ops behavior
 
@@ -20,3 +21,4 @@ These rules apply to files under `app/(admin)/`.
 - Secrets are env-only. Admin screens may show status, but never raw secret values.
 - Use explicit role guards around admin routes.
 - Keep internal notes and operational metadata separate from any customer-visible state.
+- Missing schema or integration state must fail visibly with guidance, not with hidden in-memory fallback behavior.

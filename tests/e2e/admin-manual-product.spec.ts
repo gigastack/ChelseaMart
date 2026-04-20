@@ -1,12 +1,19 @@
 import { expect, test } from "@playwright/test";
+import { signInAsAdmin, signInAsCustomer } from "@/tests/e2e/helpers/auth";
 
-test("admin manual product creation flow uses the canonical QA product", async ({ page }) => {
-  await page.goto("/admin/products/new");
-  await expect(page.getByRole("heading", { name: /choose how this product enters the catalog/i })).toBeVisible();
+test("customer is blocked from admin while admin can access the control surface", async ({ browser }) => {
+  const customerPage = await browser.newPage();
+  await signInAsCustomer(customerPage, "/");
+  await expect(customerPage.getByRole("link", { name: /admin/i })).toHaveCount(0);
+  await customerPage.goto("/admin");
+  await expect(customerPage).toHaveURL(/\/account\/orders/);
+  await customerPage.close();
 
-  await page.getByRole("link", { name: /start manual upload/i }).click();
-
-  await expect(page.getByRole("heading", { level: 1, name: /create manual product/i })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: /product title/i })).toHaveValue("Product Image Sample");
-  await expect(page.getByRole("button", { name: /publish product/i })).toBeVisible();
+  const adminPage = await browser.newPage();
+  await signInAsAdmin(adminPage, "/admin");
+  await expect(adminPage).toHaveURL(/\/admin/);
+  await expect(adminPage.getByRole("heading", { name: /operations control room/i })).toBeVisible();
+  await adminPage.goto("/admin/products");
+  await expect(adminPage.getByRole("heading", { name: /^products$/i })).toBeVisible();
+  await adminPage.close();
 });

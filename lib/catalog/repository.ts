@@ -1,5 +1,6 @@
-import { getOptionalServerEnv } from "@/lib/config/env";
-import { seedProducts, type SeedProduct } from "@/lib/demo/manual-upload-seed";
+import { desc, eq } from "drizzle-orm";
+import { getOptionalDatabaseClient } from "@/lib/db/client";
+import { categories, products } from "@/lib/db/schema";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 export type StorefrontProductRecord = {
@@ -43,65 +44,76 @@ function formatRelativeLabel(dateIso: string) {
   }).format(date);
 }
 
-function mapSeedProduct(product: SeedProduct): StorefrontProductRecord {
-  return {
-    category: product.category,
-    description: product.description,
-    id: product.id,
-    imageUrl: product.coverImageUrl,
-    longDescription: product.longDescription,
-    moq: product.moq,
-    priceDisplay: formatNaira(product.basePriceNgn),
-    sellPriceNgn: product.basePriceNgn,
-    slug: product.slug,
-    specs: product.specs,
-    title: product.title,
-    weightKg: product.weightKg,
-  };
-}
-
-function getSeedStorefrontProducts() {
-  return seedProducts.filter((product) => product.status === "live").map(mapSeedProduct);
-}
-
 export async function listStorefrontProducts() {
-  const { supabaseServiceRoleKey } = getOptionalServerEnv();
+  const databaseClient = getOptionalDatabaseClient();
 
-  if (!supabaseServiceRoleKey) {
-    return getSeedStorefrontProducts();
-  }
+  if (databaseClient) {
+    const rows = await databaseClient
+      .select({
+        categoryName: categories.name,
+        coverImageUrl: products.coverImageUrl,
+        description: products.description,
+        id: products.id,
+        moq: products.moq,
+        sellPriceNgn: products.sellPriceNgn,
+        shortDescription: products.shortDescription,
+        slug: products.slug,
+        title: products.title,
+        weightKg: products.weightKg,
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(eq(products.status, "live"))
+      .orderBy(desc(products.updatedAt));
 
-  try {
-    const supabase = createSupabaseServiceRoleClient();
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, slug, title, short_description, description, moq, weight_kg, sell_price_ngn, cover_image_url")
-      .eq("status", "live")
-      .order("updated_at", { ascending: false });
-
-    if (error || !data?.length) {
-      return getSeedStorefrontProducts();
-    }
-
-    return data.map((product) => ({
-      category: "Manual Upload",
-      description: product.short_description ?? "Manual upload product ready for customer browsing.",
+    return rows.map((product) => ({
+      category: product.categoryName ?? "Manual Upload",
+      description: product.shortDescription ?? "Manual-upload product ready for customer browsing.",
       id: product.id,
-      imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
+      imageUrl: product.coverImageUrl ?? "/ProductImage.jpg",
       longDescription:
         product.description ??
         "This manual-upload product is persisted in the local catalog and priced independently from live ELIM reads.",
       moq: product.moq,
-      priceDisplay: formatNaira(Number(product.sell_price_ngn ?? 0)),
-      sellPriceNgn: Number(product.sell_price_ngn ?? 0),
+      priceDisplay: formatNaira(Number(product.sellPriceNgn ?? 0)),
+      sellPriceNgn: Number(product.sellPriceNgn ?? 0),
       slug: product.slug,
       specs: ["Manual upload", "Local catalog", "NGN checkout"],
       title: product.title,
-      weightKg: Number(product.weight_kg ?? 0),
+      weightKg: Number(product.weightKg ?? 0),
     }));
-  } catch {
-    return getSeedStorefrontProducts();
   }
+
+  const supabase = createSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, slug, title, short_description, description, moq, weight_kg, sell_price_ngn, cover_image_url, categories(name)")
+    .eq("status", "live")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((product) => ({
+    category:
+      product.categories && typeof product.categories === "object" && "name" in product.categories
+        ? String(product.categories.name)
+        : "Manual Upload",
+    description: product.short_description ?? "Manual-upload product ready for customer browsing.",
+    id: product.id,
+    imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
+    longDescription:
+      product.description ??
+      "This manual-upload product is persisted in the local catalog and priced independently from live ELIM reads.",
+    moq: product.moq,
+    priceDisplay: formatNaira(Number(product.sell_price_ngn ?? 0)),
+    sellPriceNgn: Number(product.sell_price_ngn ?? 0),
+    slug: product.slug,
+    specs: ["Manual upload", "Local catalog", "NGN checkout"],
+    title: product.title,
+    weightKg: Number(product.weight_kg ?? 0),
+  }));
 }
 
 export async function listStorefrontCategories() {
@@ -113,59 +125,52 @@ export async function findStorefrontProductBySlug(slug: string) {
 }
 
 export async function listAdminProducts() {
-  const { supabaseServiceRoleKey } = getOptionalServerEnv();
+  const databaseClient = getOptionalDatabaseClient();
 
-  if (!supabaseServiceRoleKey) {
-    return seedProducts.map<AdminCatalogProductRecord>((product) => ({
+  if (databaseClient) {
+    const rows = await databaseClient
+      .select({
+        id: products.id,
+        priceNgn: products.sellPriceNgn,
+        sourceType: products.sourceType,
+        status: products.status,
+        title: products.title,
+        updatedAt: products.updatedAt,
+        weightKg: products.weightKg,
+      })
+      .from(products)
+      .orderBy(desc(products.updatedAt));
+
+    return rows.map((product) => ({
       id: product.id,
-      priceNgn: product.basePriceNgn,
-      sourceType: "manual",
+      priceNgn: Number(product.priceNgn ?? 0),
+      sourceType: product.sourceType,
       status: product.status,
       title: product.title,
-      updatedLabel: formatRelativeLabel(product.updatedAt),
-      weightKg: product.weightKg,
+      updatedLabel: formatRelativeLabel(String(product.updatedAt)),
+      weightKg: product.weightKg ? Number(product.weightKg) : null,
     }));
   }
 
-  try {
-    const supabase = createSupabaseServiceRoleClient();
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, title, sell_price_ngn, source_type, status, updated_at, weight_kg")
-      .order("updated_at", { ascending: false });
+  const supabase = createSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, title, sell_price_ngn, source_type, status, updated_at, weight_kg")
+    .order("updated_at", { ascending: false });
 
-    if (error || !data?.length) {
-      return seedProducts.map<AdminCatalogProductRecord>((product) => ({
-        id: product.id,
-        priceNgn: product.basePriceNgn,
-        sourceType: "manual",
-        status: product.status,
-        title: product.title,
-        updatedLabel: formatRelativeLabel(product.updatedAt),
-        weightKg: product.weightKg,
-      }));
-    }
-
-    return data.map((product) => ({
-      id: product.id,
-      priceNgn: Number(product.sell_price_ngn ?? 0),
-      sourceType: product.source_type,
-      status: product.status,
-      title: product.title,
-      updatedLabel: formatRelativeLabel(product.updated_at),
-      weightKg: product.weight_kg ? Number(product.weight_kg) : null,
-    }));
-  } catch {
-    return seedProducts.map<AdminCatalogProductRecord>((product) => ({
-      id: product.id,
-      priceNgn: product.basePriceNgn,
-      sourceType: "manual",
-      status: product.status,
-      title: product.title,
-      updatedLabel: formatRelativeLabel(product.updatedAt),
-      weightKg: product.weightKg,
-    }));
+  if (error) {
+    throw error;
   }
+
+  return (data ?? []).map((product) => ({
+    id: product.id,
+    priceNgn: Number(product.sell_price_ngn ?? 0),
+    sourceType: product.source_type,
+    status: product.status,
+    title: product.title,
+    updatedLabel: formatRelativeLabel(product.updated_at),
+    weightKg: product.weight_kg ? Number(product.weight_kg) : null,
+  }));
 }
 
 export async function findAdminProduct(productId: string) {

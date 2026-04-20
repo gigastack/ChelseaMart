@@ -21,7 +21,10 @@ describe("config audit", () => {
     const envExample = fs.readFileSync(path.join(projectRoot, ".env.example"), "utf8");
 
     expect(envExample).toContain("ELIM_API_BASE_URL=");
+    expect(envExample).toContain("DATABASE_URL=");
     expect(envExample).toContain("PAYSTACK_API_BASE_URL=");
+    expect(envExample).toContain("EMAIL_PROVIDER=");
+    expect(envExample).toContain("SMTP_HOST=");
     expect(envExample).toContain("ELIM_API_KEY=your-elim-bearer-key");
     expect(envExample).not.toContain("sk_live_");
   });

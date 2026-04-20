@@ -8,7 +8,7 @@ type AdminLayoutProps = {
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
   if (hasSupabaseAuthEnv()) {
-    await requireAdminUser("/");
+    await requireAdminUser("/account/orders");
   }
 
   return children;

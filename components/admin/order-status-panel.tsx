@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { updateOrderStatusAction } from "@/app/(admin)/admin/orders/actions";
 import type { OrderStatus } from "@/lib/domain/types";
 
 const nextStatusLabels: Record<OrderStatus, string[]> = {
@@ -12,10 +13,11 @@ const nextStatusLabels: Record<OrderStatus, string[]> = {
 };
 
 type OrderStatusPanelProps = {
+  orderId: string;
   status: OrderStatus;
 };
 
-export function OrderStatusPanel({ status }: OrderStatusPanelProps) {
+export function OrderStatusPanel({ orderId, status }: OrderStatusPanelProps) {
   return (
     <div className="space-y-4 rounded-[var(--radius-lg)] border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] p-6">
       <div className="space-y-2">
@@ -24,9 +26,13 @@ export function OrderStatusPanel({ status }: OrderStatusPanelProps) {
       </div>
       <div className="flex flex-wrap gap-3">
         {nextStatusLabels[status].map((label) => (
-          <Button key={label} size="sm" variant={label === "cancelled" ? "danger" : "secondary"}>
-            Mark as {label}
-          </Button>
+          <form action={updateOrderStatusAction} key={label}>
+            <input name="orderId" type="hidden" value={orderId} />
+            <input name="status" type="hidden" value={label} />
+            <Button size="sm" type="submit" variant={label === "cancelled" ? "danger" : "secondary"}>
+              Mark as {label}
+            </Button>
+          </form>
         ))}
       </div>
     </div>

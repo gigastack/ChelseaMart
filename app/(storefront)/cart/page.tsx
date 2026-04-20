@@ -3,11 +3,11 @@ import { CartList } from "@/components/storefront/cart-list";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { listSeedCartItems } from "@/lib/orders/repository";
+import { listCheckoutCartItems } from "@/lib/orders/repository";
 import { cn } from "@/lib/utils";
 
 export default async function CartPage() {
-  const cartItems = listSeedCartItems();
+  const cartItems = await listCheckoutCartItems();
   const subtotal = cartItems.reduce((sum, item) => sum + item.sellPriceNgn * item.quantity, 0);
 
   return (

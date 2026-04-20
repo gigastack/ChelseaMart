@@ -8,9 +8,12 @@ These rules apply to files under `components/`.
 - Shared components must take className overrides and remain composable.
 - Keep visual decisions aligned to semantic tokens from `app/globals.css`, not raw hex values.
 - Avoid mixing domain logic into presentational components.
+- Default to broad surfaces, separators, and grouped spacing before introducing card chrome.
+- When motion is needed, prefer components that can compose with `Motion for React` without layout thrash or re-render churn.
 
 ## accessibility and behavior
 
 - Interactive components must have visible focus states and accessible labels/semantics.
 - Prefer semantic HTML first, then layer styling and behavior.
 - Keep loading, empty, and status components generic enough for reuse across storefront and admin.
+- Reduced-motion support is required for shared transitions and animated indicators.

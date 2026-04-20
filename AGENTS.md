@@ -25,6 +25,7 @@ Planned nested placement once the app exists:
 - Use `Next.js` App Router.
 - Use `TypeScript` in strict mode.
 - Use `Supabase` for Postgres, auth, and storage.
+- Use `Drizzle ORM` as the typed schema and query layer for app-owned commerce data.
 - Use `Paystack` as the only live `v1` payment provider.
 - Use `Zod` for validation of user input, admin forms, and normalized external payloads.
 - Use CSS variables/design tokens for the brand kit. Tailwind utility usage is fine, but design tokens remain the source of truth.
@@ -47,6 +48,7 @@ Planned nested placement once the app exists:
 - Put pricing, currency, import normalization, payment handling, and order snapshot logic into dedicated server-side modules.
 - Access environment variables through a typed config layer rather than scattering `process.env` reads everywhere.
 - Validate all external API payloads and form inputs before using them.
+- Once the hosted commerce schema is live, do not keep in-memory compatibility fallbacks in normal runtime paths. Fail clearly or block the workflow with actionable guidance.
 - Persist snapshot values used for orders so later settings changes do not rewrite historical totals.
 - Keep buyer and consignee as separate models.
 - Keep ELIM source linkage and source snapshots for API-linked products.
@@ -55,10 +57,20 @@ Planned nested placement once the app exists:
 
 ## design standards
 
-- Use the approved deep blue-green brand kit and semantic design tokens. Never hardcode ad hoc palette choices in components.
-- Storefront UI must stay premium, calm, image-led, and trust-heavy.
-- Admin UI must feel like an operational control room with stronger data density.
+- Use a fluid editorial brand system built from semantic tokens. Never hardcode ad hoc palette choices in components.
+- Global palette direction:
+  - `ink` foundation for structure and typography
+  - `porcelain` and `linen` surfaces for warmth and calm
+  - `oxidized teal` as the primary brand accent
+  - `brass` as the restrained premium accent, never as a dominant fill
+- Storefront UI must feel premium, calm, image-led, trust-heavy, and spatially fluid rather than boxed or card-stacked.
+- Admin UI must feel like an operational control room with stronger data density, sharper alignment, and faster scanning.
 - Avoid marketplace clutter, bargain-chaos styling, and generic dark-dashboard defaults.
+- Prefer large layout planes, editorial spacing, and selective dividers over all-purpose card grids.
+- Default motion framework is `Motion for React` for layout transitions, section reveals, and route presence effects. Prefer transform/opacity animation and shared layout transitions over heavy timelines.
+- `Lenis` is optional and storefront-only for long-form browse experiences. Do not use smooth-scroll wrappers in admin.
+- `GSAP` is not the default. Use it only for isolated art-direction cases that Motion cannot express cleanly.
+- Use reduced-motion aware transitions. Motion should make state feel continuous, not dramatic.
 - Design loading, empty, success, and error states for every major screen.
 - Keep mobile first-class on storefront and acceptable for core admin tasks.
 
@@ -77,12 +89,3 @@ Planned nested placement once the app exists:
 ## reference
 
 - Product/design spec: `docs/superpowers/specs/2026-04-17-china-nigeria-commerce-design.md`
-
-## graphify
-
-This project has a graphify knowledge graph at `graphify-out/`.
-
-Rules:
-- Before answering architecture or codebase questions, read `graphify-out/GRAPH_REPORT.md` for god nodes and community structure.
-- If `graphify-out/wiki/index.md` exists, navigate it instead of reading raw files.
-- After modifying code files in this session, run `graphify update .` when the command is available.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertAdminEmail, getUserAccess, isAdminEmail, normalizeEmail } from "@/lib/auth/access";
+import { assertAdminRole, getUserAccess, isAdminRole, normalizeEmail, parseProfileRole } from "@/lib/auth/access";
 
 describe("auth access helpers", () => {
   it("normalizes email case and whitespace", () => {
@@ -7,20 +7,24 @@ describe("auth access helpers", () => {
     expect(normalizeEmail(null)).toBeNull();
   });
 
-  it("checks admin membership against normalized addresses", () => {
-    expect(isAdminEmail("Admin@Example.com", ["owner@example.com", "admin@example.com"])).toBe(true);
-    expect(isAdminEmail("viewer@example.com", ["owner@example.com", "admin@example.com"])).toBe(false);
+  it("parses persisted roles and identifies admins", () => {
+    expect(parseProfileRole("admin")).toBe("admin");
+    expect(parseProfileRole("customer")).toBe("customer");
+    expect(parseProfileRole("owner")).toBeNull();
+    expect(isAdminRole("admin")).toBe(true);
+    expect(isAdminRole("customer")).toBe(false);
   });
 
   it("builds access flags for route-level guards", () => {
-    expect(getUserAccess("viewer@example.com", ["admin@example.com"])).toEqual({
+    expect(getUserAccess("viewer@example.com", "customer")).toEqual({
       email: "viewer@example.com",
       isAdmin: false,
       isAuthenticated: true,
+      role: "customer",
     });
   });
 
   it("throws when a non-admin user hits an admin-only boundary", () => {
-    expect(() => assertAdminEmail("viewer@example.com", ["admin@example.com"])).toThrow(/admin/i);
+    expect(() => assertAdminRole("customer")).toThrow(/admin/i);
   });
 });
