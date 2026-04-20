@@ -143,7 +143,7 @@ export const seedOrders: SeedOrder[] = [
     paymentReference: "demo-paystack-ref-1001",
     productSubtotalNgn: 92000,
     route: "air",
-    status: "processing",
+    status: "awaiting_shipping_payment",
     userId: seedUserId,
   },
   {

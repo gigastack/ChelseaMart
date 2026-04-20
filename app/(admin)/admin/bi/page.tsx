@@ -37,8 +37,11 @@ export default async function AdminBiPage() {
               <CardTitle>Webhook health: {dashboard.payments.webhookHealth}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-[rgb(var(--text-secondary))]">
+              <p>Product revenue: NGN {dashboard.executive.productRevenueNgn.toLocaleString("en-NG")}</p>
+              <p>Shipping revenue: NGN {dashboard.executive.shippingRevenueNgn.toLocaleString("en-NG")}</p>
               <p>Success rate: {(dashboard.payments.successRate * 100).toFixed(0)}%</p>
               <p>Pending verification: {dashboard.payments.pendingVerification}</p>
+              <p>Shipping invoices due: {dashboard.payments.shippingInvoicesDue}</p>
             </CardContent>
           </Card>
         </div>

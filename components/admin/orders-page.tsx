@@ -7,13 +7,17 @@ type AdminOrdersPageProps = {
   orders: OrderRecord[];
 };
 
+function formatStatusLabel(status: string) {
+  return status.replaceAll("_", " ");
+}
+
 export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
   return (
     <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="space-y-2">
           <Badge>Orders</Badge>
-          <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Manual order operations</h1>
+          <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Warehouse and delivery queue</h1>
         </div>
 
         <DataTable>
@@ -22,6 +26,8 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
               <DataTableHead>Order</DataTableHead>
               <DataTableHead>Status</DataTableHead>
               <DataTableHead>Route</DataTableHead>
+              <DataTableHead>Product payment</DataTableHead>
+              <DataTableHead>Shipping payment</DataTableHead>
               <DataTableHead>Total</DataTableHead>
               <DataTableHead>Created</DataTableHead>
             </DataTableRow>
@@ -34,8 +40,10 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
                     {order.id}
                   </Link>
                 </DataTableCell>
-                <DataTableCell>{order.status}</DataTableCell>
-                <DataTableCell className="uppercase">{order.route}</DataTableCell>
+                <DataTableCell>{formatStatusLabel(order.status)}</DataTableCell>
+                <DataTableCell className="uppercase">{order.routeSnapshot ? order.routeSnapshot.mode : order.route}</DataTableCell>
+                <DataTableCell>{formatStatusLabel(order.productPaymentState)}</DataTableCell>
+                <DataTableCell>{formatStatusLabel(order.shippingPaymentState)}</DataTableCell>
                 <DataTableCell>NGN {order.grandTotalNgn.toLocaleString("en-NG")}</DataTableCell>
                 <DataTableCell>{order.createdLabel}</DataTableCell>
               </DataTableRow>

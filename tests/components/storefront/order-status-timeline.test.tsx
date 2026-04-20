@@ -4,10 +4,10 @@ import { OrderStatusTimeline } from "@/components/storefront/order-status-timeli
 
 describe("OrderStatusTimeline", () => {
   it("renders the order statuses in sequence", () => {
-    render(<OrderStatusTimeline currentStatus="processing" />);
+    render(<OrderStatusTimeline currentStatus="awaiting_shipping_payment" />);
 
-    expect(screen.getByText("processing")).toBeInTheDocument();
-    expect(screen.getByText("shipped")).toBeInTheDocument();
+    expect(screen.getByText("awaiting shipping payment")).toBeInTheDocument();
+    expect(screen.getByText("in transit")).toBeInTheDocument();
     expect(screen.getByText("delivered")).toBeInTheDocument();
   });
 });

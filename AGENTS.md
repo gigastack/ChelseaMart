@@ -16,8 +16,9 @@ Planned nested placement once the app exists:
 - `ELIM` is admin-only ingestion and sync. The storefront must never depend on live ELIM reads.
 - Use the local database as the storefront source of truth.
 - `USD` is display-only in `v1`. Checkout and payment are always `NGN`.
-- The product price is shown on listing and detail pages. Logistics is added only during checkout.
-- Checkout route choice is `Air` or `Sea`.
+- The product price is shown on listing and detail pages. Shipping is accepted at checkout but paid later after warehouse measurement and proof upload.
+- Checkout route choice comes from admin-managed shipping routes and route versions, not a hardcoded geography model.
+- Product payment and shipping payment are separate ledgers, separate Paystack flows, and separate customer/admin states.
 - Availability audits are admin-triggered.
 
 ## tech stack defaults

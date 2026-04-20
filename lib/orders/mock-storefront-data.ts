@@ -86,7 +86,7 @@ export const mockOrders: OrderRecord[] = [
     id: "order-1001",
     items: mockCartItems,
     route: "air",
-    status: "processing",
+    status: "awaiting_shipping_payment",
   },
   {
     consigneeId: "consignee-2",
@@ -106,7 +106,7 @@ export const mockOrders: OrderRecord[] = [
       },
     ],
     route: "sea",
-    status: "shipped",
+    status: "in_transit",
   },
 ];
 

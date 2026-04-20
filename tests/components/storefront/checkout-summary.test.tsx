@@ -3,20 +3,21 @@ import { describe, expect, it } from "vitest";
 import { CheckoutSummary } from "@/components/storefront/checkout-summary";
 
 describe("CheckoutSummary", () => {
-  it("shows product subtotal, logistics total, and NGN grand total", () => {
+  it("shows the product-only payment summary", () => {
     render(
       <CheckoutSummary
         summary={{
           currency: "NGN",
-          grandTotalNgn: 49000,
-          itemsSubtotalNgn: 40000,
-          logisticsTotalNgn: 9000,
+          payNowTotalNgn: 40000,
+          productSubtotalNgn: 40000,
+          serviceFeeNgn: 0,
         }}
       />,
     );
 
-    expect(screen.getByText("NGN 49,000")).toBeInTheDocument();
+    expect(screen.getAllByText("NGN 40,000")).toHaveLength(2);
     expect(screen.getByText("Product subtotal")).toBeInTheDocument();
-    expect(screen.getByText("Logistics total")).toBeInTheDocument();
+    expect(screen.getByText("Marketplace service fee")).toBeInTheDocument();
+    expect(screen.getByText(/shipping is billed separately/i)).toBeInTheDocument();
   });
 });

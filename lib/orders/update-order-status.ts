@@ -8,12 +8,19 @@ type UpdateOrderStatusInput = {
 };
 
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+  arrived_at_warehouse: ["weighed", "awaiting_shipping_payment", "cancelled"],
+  arrived_destination: ["out_for_delivery", "cancelled"],
+  awaiting_shipping_payment: ["shipping_paid", "cancelled"],
+  awaiting_warehouse: ["arrived_at_warehouse", "cancelled"],
   cancelled: [],
-  confirmed: ["processing", "cancelled"],
+  cart: ["route_selected", "cancelled"],
   delivered: [],
-  pending: ["confirmed", "cancelled"],
-  processing: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
+  in_transit: ["arrived_destination", "cancelled"],
+  out_for_delivery: ["delivered", "cancelled"],
+  paid_for_products: ["awaiting_warehouse", "cancelled"],
+  route_selected: ["paid_for_products", "awaiting_warehouse", "cancelled"],
+  shipping_paid: ["in_transit", "cancelled"],
+  weighed: ["awaiting_shipping_payment", "cancelled"],
 };
 
 export async function updateOrderStatus(input: UpdateOrderStatusInput) {

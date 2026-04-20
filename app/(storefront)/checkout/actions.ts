@@ -4,20 +4,17 @@ import { redirect } from "next/navigation";
 import { createPaystackTransaction } from "@/lib/payments/create-paystack-transaction";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import {
-  attachPaystackReference,
-  createPendingOrder,
+  attachProductPaymentReference,
+  createRouteAcceptedOrderRecord,
   findConsigneeById,
   listCheckoutCartItems,
 } from "@/lib/orders/repository";
 
-function normalizeRoute(value: FormDataEntryValue | null) {
-  return value === "sea" ? "sea" : "air";
-}
-
 export async function startCheckoutPaymentAction(formData: FormData) {
   const user = await requireAuthenticatedUser("/checkout");
   const consigneeId = String(formData.get("consigneeId") ?? "");
-  const route = normalizeRoute(formData.get("route"));
+  const shippingRouteId = String(formData.get("shippingRouteId") ?? "");
+  const acceptTerms = String(formData.get("acceptTerms") ?? "") === "accepted";
   const cartItems = await listCheckoutCartItems();
   const consignee = await findConsigneeById(consigneeId, user.id);
 
@@ -25,26 +22,35 @@ export async function startCheckoutPaymentAction(formData: FormData) {
     redirect(`/checkout?error=${encodeURIComponent("Choose a saved consignee before payment.")}`);
   }
 
+  if (!shippingRouteId) {
+    redirect(`/checkout?error=${encodeURIComponent("Choose a shipping route before product payment.")}`);
+  }
+
+  if (!acceptTerms) {
+    redirect(`/checkout?error=${encodeURIComponent("Accept the shipping terms before paying for products.")}`);
+  }
+
   if (!cartItems.length) {
     redirect(`/checkout?error=${encodeURIComponent("Your checkout cart is empty.")}`);
   }
 
-  const pendingOrder = await createPendingOrder({
+  const pendingOrder = await createRouteAcceptedOrderRecord({
     cartItems,
     consigneeId,
-    route,
+    shippingRouteId,
     userId: user.id,
   });
 
   const paystackRequest = createPaystackTransaction({
-    amountNgn: pendingOrder.totals.grandTotalNgn,
+    amountNgn: pendingOrder.totals.productPaymentTotalNgn,
     callbackUrl: pendingOrder.callbackUrl,
     customerEmail: user.email ?? "",
     metadata: {
       orderId: pendingOrder.orderId,
-      route,
+      paymentPhase: "product",
+      shippingRouteId,
     },
-    reference: `order-${pendingOrder.orderId}`,
+    reference: `product-${pendingOrder.paymentId}`,
   });
 
   const response = await fetch(paystackRequest.url, {
@@ -54,7 +60,7 @@ export async function startCheckoutPaymentAction(formData: FormData) {
   });
 
   if (!response.ok) {
-    redirect(`/payment/failed?error=${encodeURIComponent("Paystack initialization failed. Please try again.")}`);
+    redirect(`/payment/failed?kind=product&error=${encodeURIComponent("Paystack initialization failed. Please try again.")}`);
   }
 
   const payload = (await response.json()) as {
@@ -65,13 +71,13 @@ export async function startCheckoutPaymentAction(formData: FormData) {
   };
 
   const paymentReference = payload.data?.reference ?? paystackRequest.payload.reference;
-  await attachPaystackReference(pendingOrder.orderId, {
+  await attachProductPaymentReference(pendingOrder.orderId, pendingOrder.paymentId, {
     authorizationUrl: payload.data?.authorization_url ?? null,
     paymentReference,
   });
 
   if (!payload.data?.authorization_url) {
-    redirect(`/payment/pending?reference=${encodeURIComponent(paymentReference)}`);
+    redirect(`/payment/pending?kind=product&reference=${encodeURIComponent(paymentReference)}`);
   }
 
   redirect(payload.data.authorization_url);

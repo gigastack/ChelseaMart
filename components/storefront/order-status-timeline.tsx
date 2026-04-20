@@ -1,7 +1,24 @@
 import type { OrderStatus } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
-const statuses: OrderStatus[] = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+const statuses: OrderStatus[] = [
+  "route_selected",
+  "paid_for_products",
+  "awaiting_warehouse",
+  "arrived_at_warehouse",
+  "weighed",
+  "awaiting_shipping_payment",
+  "shipping_paid",
+  "in_transit",
+  "arrived_destination",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+];
+
+function formatStatusLabel(status: OrderStatus) {
+  return status.replaceAll("_", " ");
+}
 
 type OrderStatusTimelineProps = {
   currentStatus: OrderStatus;
@@ -9,11 +26,12 @@ type OrderStatusTimelineProps = {
 
 export function OrderStatusTimeline({ currentStatus }: OrderStatusTimelineProps) {
   const currentIndex = statuses.indexOf(currentStatus);
+  const isCancelled = currentStatus === "cancelled";
 
   return (
-    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
       {statuses.map((status, index) => {
-        const isActive = index <= currentIndex || currentStatus === "cancelled";
+        const isActive = isCancelled ? status === "cancelled" : index <= currentIndex;
 
         return (
           <div
@@ -25,7 +43,7 @@ export function OrderStatusTimeline({ currentStatus }: OrderStatusTimelineProps)
                 : "border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] text-[rgb(var(--text-secondary))]",
             )}
           >
-            {status}
+            {formatStatusLabel(status)}
           </div>
         );
       })}

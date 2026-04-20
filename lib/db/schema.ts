@@ -21,13 +21,30 @@ const timestamps = {
 export const productStatusEnum = pgEnum("product_status", ["draft", "live", "removed", "unavailable"]);
 export const productSourceTypeEnum = pgEnum("product_source_type", ["manual", "api"]);
 export const checkoutRouteEnum = pgEnum("checkout_route", ["air", "sea"]);
-export const orderStatusEnum = pgEnum("order_status", ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]);
+export const orderStatusEnum = pgEnum("order_status", [
+  "cart",
+  "route_selected",
+  "paid_for_products",
+  "awaiting_warehouse",
+  "arrived_at_warehouse",
+  "weighed",
+  "awaiting_shipping_payment",
+  "shipping_paid",
+  "in_transit",
+  "arrived_destination",
+  "out_for_delivery",
+  "delivered",
+  "cancelled",
+]);
 export const importJobStatusEnum = pgEnum("import_job_status", ["queued", "processing", "completed", "completed_with_errors", "failed"]);
 export const importJobItemStatusEnum = pgEnum("import_job_item_status", ["queued", "imported", "duplicate", "failed", "needs_review"]);
 export const catalogAlertTypeEnum = pgEnum("catalog_alert_type", ["source_unavailable", "sync_failed", "missing_required_data"]);
 export const profileRoleEnum = pgEnum("profile_role", ["customer", "admin"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "paid", "failed"]);
 export const elimPlatformEnum = pgEnum("elim_platform", ["alibaba", "taobao"]);
+export const routeVersionFormulaKindEnum = pgEnum("route_version_formula_kind", ["per_kg", "per_cbm"]);
+export const shipmentMeasurementBasisEnum = pgEnum("shipment_measurement_basis", ["weight_kg", "volume_cbm"]);
+export const shippingPaymentStateEnum = pgEnum("shipping_payment_state", ["not_due", "pending", "paid", "failed"]);
 
 export const categories = pgTable(
   "categories",
@@ -66,6 +83,36 @@ export const shippingConfigs = pgTable("shipping_configs", {
   ...timestamps,
 });
 
+export const shippingRoutes = pgTable("shipping_routes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  originLabel: text("origin_label").notNull(),
+  destinationLabel: text("destination_label").notNull(),
+  mode: checkoutRouteEnum("mode").notNull(),
+  formulaLabel: text("formula_label").notNull(),
+  etaDaysMin: integer("eta_days_min").notNull(),
+  etaDaysMax: integer("eta_days_max").notNull(),
+  termsSummary: text("terms_summary").notNull(),
+  active: boolean("active").default(true).notNull(),
+  ...timestamps,
+});
+
+export const shippingRouteVersions = pgTable("shipping_route_versions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  routeId: uuid("route_id")
+    .notNull()
+    .references(() => shippingRoutes.id, { onDelete: "cascade" }),
+  versionLabel: text("version_label").notNull(),
+  formulaKind: routeVersionFormulaKindEnum("formula_kind").notNull(),
+  formulaLabel: text("formula_label").notNull(),
+  rateCurrency: text("rate_currency").default("NGN").notNull(),
+  pricePerKg: numeric("price_per_kg", { precision: 18, scale: 2 }),
+  pricePerCbm: numeric("price_per_cbm", { precision: 18, scale: 2 }),
+  usdToNgnRate: numeric("usd_to_ngn_rate", { precision: 18, scale: 6 }),
+  active: boolean("active").default(true).notNull(),
+  ...timestamps,
+});
+
 export const products = pgTable(
   "products",
   {
@@ -80,6 +127,7 @@ export const products = pgTable(
     status: productStatusEnum("status").default("draft").notNull(),
     moq: integer("moq").default(1).notNull(),
     weightKg: numeric("weight_kg", { precision: 10, scale: 3 }).notNull(),
+    volumeCbm: numeric("volume_cbm", { precision: 10, scale: 3 }),
     basePriceNgn: numeric("base_price_ngn", { precision: 18, scale: 2 }).notNull(),
     sellPriceNgn: numeric("sell_price_ngn", { precision: 18, scale: 2 }).notNull(),
     featured: boolean("featured").default(false).notNull(),
@@ -156,14 +204,26 @@ export const orders = pgTable(
     consigneeId: uuid("consignee_id")
       .notNull()
       .references(() => consignees.id, { onDelete: "restrict" }),
-    route: checkoutRouteEnum("route").notNull(),
-    status: orderStatusEnum("status").default("pending").notNull(),
+    route: checkoutRouteEnum("route"),
+    shippingRouteId: uuid("shipping_route_id").references(() => shippingRoutes.id, { onDelete: "set null" }),
+    shippingRouteVersionId: uuid("shipping_route_version_id").references(() => shippingRouteVersions.id, {
+      onDelete: "set null",
+    }),
+    routeAccepted: boolean("route_accepted").default(false).notNull(),
+    routeAcceptedAt: timestamp("route_accepted_at", { withTimezone: true }),
+    routeSnapshot: jsonb("route_snapshot"),
+    status: orderStatusEnum("status").default("cart").notNull(),
     currency: text("currency").default("NGN").notNull(),
     productSubtotalNgn: numeric("product_subtotal_ngn", { precision: 18, scale: 2 }).notNull(),
+    serviceFeeNgn: numeric("service_fee_ngn", { precision: 18, scale: 2 }).default("0").notNull(),
+    productPaymentTotalNgn: numeric("product_payment_total_ngn", { precision: 18, scale: 2 }).default("0").notNull(),
     logisticsTotalNgn: numeric("logistics_total_ngn", { precision: 18, scale: 2 }).notNull(),
     grandTotalNgn: numeric("grand_total_ngn", { precision: 18, scale: 2 }).notNull(),
     paymentReference: text("payment_reference"),
     paymentStatus: paymentStatusEnum("payment_status").default("pending").notNull(),
+    productPaymentState: paymentStatusEnum("product_payment_state").default("pending").notNull(),
+    shippingPaymentState: shippingPaymentStateEnum("shipping_payment_state").default("not_due").notNull(),
+    shippingCostNgn: numeric("shipping_cost_ngn", { precision: 18, scale: 2 }),
     paystackAuthorizationUrl: text("paystack_authorization_url"),
     paymentVerifiedAt: timestamp("payment_verified_at", { withTimezone: true }),
     ...timestamps,
@@ -180,11 +240,31 @@ export const orderItems = pgTable("order_items", {
   productTitleSnapshot: text("product_title_snapshot").notNull(),
   quantity: integer("quantity").notNull(),
   moqSnapshot: integer("moq_snapshot").notNull(),
-  weightKgSnapshot: numeric("weight_kg_snapshot", { precision: 10, scale: 3 }).notNull(),
+  weightKgSnapshot: numeric("weight_kg_snapshot", { precision: 10, scale: 3 }),
+  volumeCbmSnapshot: numeric("volume_cbm_snapshot", { precision: 10, scale: 3 }),
   productUnitPriceNgnSnapshot: numeric("product_unit_price_ngn_snapshot", { precision: 18, scale: 2 }).notNull(),
   logisticsFeeNgnSnapshot: numeric("logistics_fee_ngn_snapshot", { precision: 18, scale: 2 }).notNull(),
   lineTotalNgnSnapshot: numeric("line_total_ngn_snapshot", { precision: 18, scale: 2 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const orderShipments = pgTable("order_shipments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" })
+    .unique(),
+  measurementBasis: shipmentMeasurementBasisEnum("measurement_basis"),
+  measuredWeightKg: numeric("measured_weight_kg", { precision: 10, scale: 3 }),
+  measuredVolumeCbm: numeric("measured_volume_cbm", { precision: 10, scale: 3 }),
+  measuredAt: timestamp("measured_at", { withTimezone: true }),
+  measuredByProfileId: uuid("measured_by_profile_id"),
+  weighingProofPath: text("weighing_proof_path"),
+  weighingProofMimeType: text("weighing_proof_mime_type"),
+  shippingQuoteSnapshot: jsonb("shipping_quote_snapshot"),
+  shippingCostNgn: numeric("shipping_cost_ngn", { precision: 18, scale: 2 }),
+  customerNotifiedAt: timestamp("customer_notified_at", { withTimezone: true }),
+  ...timestamps,
 });
 
 export const orderStatusEvents = pgTable("order_status_events", {
@@ -233,6 +313,37 @@ export const catalogAlerts = pgTable("catalog_alerts", {
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 });
 
+export const productPayments = pgTable("product_payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  amountNgn: numeric("amount_ngn", { precision: 18, scale: 2 }).notNull(),
+  provider: text("provider").default("paystack").notNull(),
+  paymentReference: text("payment_reference").unique(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  payload: jsonb("payload").default({}).notNull(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  ...timestamps,
+});
+
+export const shippingPayments = pgTable("shipping_payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  shipmentId: uuid("shipment_id")
+    .notNull()
+    .references(() => orderShipments.id, { onDelete: "cascade" }),
+  amountNgn: numeric("amount_ngn", { precision: 18, scale: 2 }).notNull(),
+  provider: text("provider").default("paystack").notNull(),
+  paymentReference: text("payment_reference").unique(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  payload: jsonb("payload").default({}).notNull(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  ...timestamps,
+});
+
 export const paystackEvents = pgTable("paystack_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   dedupeKey: text("dedupe_key").notNull().unique(),
@@ -251,9 +362,11 @@ export const schema = {
   importJobItems,
   importJobs,
   orderItems,
+  orderShipments,
   orderStatusEvents,
   orders,
   paystackEvents,
+  productPayments,
   productSources,
   productStatusEnum,
   productSourceTypeEnum,
@@ -262,4 +375,7 @@ export const schema = {
   profileRoleEnum,
   profiles,
   shippingConfigs,
+  shippingPayments,
+  shippingRoutes,
+  shippingRouteVersions,
 };

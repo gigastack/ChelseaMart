@@ -8,10 +8,18 @@ type GetBiDashboardInput = {
 
 export async function getBiDashboard({ from, to }: GetBiDashboardInput) {
   const [orders, products] = await Promise.all([listAdminOrders(), listAdminProducts()]);
-  const revenue = orders.reduce((sum, order) => sum + order.grandTotalNgn, 0);
+  const productRevenue = orders.reduce((sum, order) => sum + order.productPaymentTotalNgn, 0);
+  const shippingRevenue = orders.reduce(
+    (sum, order) => sum + (order.shippingPaymentState === "paid" ? order.shippingCostNgn ?? 0 : 0),
+    0,
+  );
+  const revenue = productRevenue + shippingRevenue;
   const routeSplit = orders.reduce(
     (acc, order) => {
-      acc[order.route as "air" | "sea"] += 1;
+      if (order.route) {
+        acc[order.route] += 1;
+      }
+
       return acc;
     },
     { air: 0, sea: 0 },
@@ -19,6 +27,10 @@ export async function getBiDashboard({ from, to }: GetBiDashboardInput) {
   const unavailableProducts = products.filter((product) => product.status === "unavailable");
   const draftProducts = products.filter((product) => product.status === "draft");
   const liveProducts = products.filter((product) => product.status === "live");
+  const warehouseQueue = orders.filter((order) =>
+    ["awaiting_warehouse", "arrived_at_warehouse", "weighed"].includes(order.status),
+  ).length;
+  const awaitingShippingInvoices = orders.filter((order) => order.shippingPaymentState === "pending").length;
 
   return {
     catalog: {
@@ -28,17 +40,22 @@ export async function getBiDashboard({ from, to }: GetBiDashboardInput) {
     },
     executive: {
       dateRange: { from, to },
+      productRevenueNgn: productRevenue,
       revenueNgn: revenue,
+      shippingRevenueNgn: shippingRevenue,
       totalOrders: orders.length,
     },
     operations: {
       failedImports: 0,
       processedImports: products.length,
+      warehouseQueue,
+      awaitingShippingInvoices,
       unavailableAlerts: unavailableProducts.length,
     },
     payments: {
-      pendingVerification: orders.filter((order) => order.paymentReference === null).length,
-      successRate: orders.length === 0 ? 1 : orders.filter((order) => order.paymentReference).length / orders.length,
+      pendingVerification: orders.filter((order) => order.productPaymentState !== "paid").length,
+      successRate: orders.length === 0 ? 1 : orders.filter((order) => order.productPaymentState === "paid").length / orders.length,
+      shippingInvoicesDue: awaitingShippingInvoices,
       webhookHealth: "seeded",
     },
     sales: {
