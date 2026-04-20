@@ -3,7 +3,7 @@ import type { ElimPlatform } from "@/lib/imports/elim-platform";
 import { importEntrySchema, type ElimProductPayload, type ImportEntry } from "@/lib/validation/imports";
 
 type RunImportJobInput = {
-  cnyToNgnRate: number;
+  defaultMoq: number;
   entries: ImportEntry[];
   existingSourceIds: Set<string>;
   fetchByKeyword: (keyword: string, platform: ElimPlatform) => Promise<ElimProductPayload[]>;
@@ -33,7 +33,7 @@ type RunImportJobResult = {
 };
 
 export async function runImportJob({
-  cnyToNgnRate,
+  defaultMoq,
   entries,
   existingSourceIds,
   fetchByKeyword,
@@ -92,7 +92,7 @@ export async function runImportJob({
             continue;
           }
 
-          const normalized = normalizeElimProduct(result, { cnyToNgnRate });
+          const normalized = normalizeElimProduct(result, { defaultMoq });
           seenSourceIds.add(result.productId);
           createdProducts.push(normalized);
           jobItems.push({
@@ -122,7 +122,7 @@ export async function runImportJob({
         continue;
       }
 
-      const normalized = normalizeElimProduct(payload, { cnyToNgnRate });
+      const normalized = normalizeElimProduct(payload, { defaultMoq });
       seenSourceIds.add(payload.productId);
       createdProducts.push(normalized);
       jobItems.push({

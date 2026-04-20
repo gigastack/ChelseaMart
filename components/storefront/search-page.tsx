@@ -15,14 +15,14 @@ export function StorefrontSearchPage({ products, query = "product" }: Storefront
   return (
     <main className="bg-[rgb(var(--surface-base))]">
       <section className="mx-auto max-w-7xl space-y-8 px-6 py-12 lg:px-12">
-        <div className="space-y-3">
+        <div className="space-y-3 border-b border-[rgb(var(--border-subtle))] pb-6">
           <Badge>Search</Badge>
           <div className="space-y-2">
-            <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
+            <h1 className="font-serif text-4xl tracking-[-0.04em] text-[rgb(var(--text-primary))]">
               Results for &ldquo;{query}&rdquo;
             </h1>
             <p className="text-base leading-7 text-[rgb(var(--text-secondary))]">
-              {results.length} curated products matched your search.
+              {results.length} curated products matched your search across the local cargo-ready catalog.
             </p>
           </div>
         </div>

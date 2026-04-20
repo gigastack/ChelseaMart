@@ -1,7 +1,10 @@
+import { sumProductPaymentTotals } from "@/lib/pricing/calculate";
+
 type CartItemInput = {
+  effectiveMoq: number;
   productId: string;
   quantity: number;
-  sellPriceNgn: number;
+  sellPriceCny: number;
   title: string;
 };
 
@@ -19,6 +22,7 @@ type RouteSnapshot = {
 
 type CreateRouteAcceptedOrderInput = {
   cartItems: CartItemInput[];
+  cnyToNgnRate: number;
   consigneeId: string;
   routeSnapshot: RouteSnapshot;
   serviceFeeNgn: number;
@@ -30,23 +34,37 @@ function roundMoney(value: number) {
 }
 
 export function createRouteAcceptedOrder(input: CreateRouteAcceptedOrderInput) {
-  const items = input.cartItems.map((item) => ({
-    lineTotalNgnSnapshot: roundMoney(item.sellPriceNgn * item.quantity),
-    moqSnapshot: 1,
+  const totals = sumProductPaymentTotals({
+    cnyToNgnRate: input.cnyToNgnRate,
+    items: input.cartItems.map((item) => ({
+      effectiveMoq: item.effectiveMoq,
+      quantity: item.quantity,
+      sellPriceCny: item.sellPriceCny,
+    })),
+  });
+  const items = input.cartItems.map((item, index) => ({
+    effectiveMoqSnapshot: totals.lines[index]?.effectiveMoq ?? item.effectiveMoq,
+    lineTotalCnySnapshot: totals.lines[index]?.lineTotalCny ?? roundMoney(item.sellPriceCny * item.quantity),
+    lineTotalNgnSnapshot: totals.lines[index]?.lineTotalNgn ?? 0,
+    moqSnapshot: totals.lines[index]?.effectiveMoq ?? item.effectiveMoq,
     productId: item.productId,
     productTitleSnapshot: item.title,
-    productUnitPriceNgnSnapshot: item.sellPriceNgn,
+    productUnitPriceCnySnapshot: totals.lines[index]?.productUnitPriceCny ?? item.sellPriceCny,
+    productUnitPriceNgnSnapshot: totals.lines[index]?.productUnitPriceNgn ?? 0,
     quantity: item.quantity,
   }));
 
-  const productSubtotalNgn = roundMoney(items.reduce((sum, item) => sum + item.lineTotalNgnSnapshot, 0));
+  const productSubtotalCny = totals.productSubtotalCny;
+  const productSubtotalNgn = totals.productSubtotalNgn;
   const productPaymentTotalNgn = roundMoney(productSubtotalNgn + input.serviceFeeNgn);
 
   return {
     consigneeId: input.consigneeId,
     items,
+    productPaymentCnyToNgnRate: input.cnyToNgnRate,
     productPaymentState: "pending" as const,
     productPaymentTotalNgn,
+    productSubtotalCny,
     productSubtotalNgn,
     routeAccepted: true,
     routeAcceptedAt: new Date().toISOString(),

@@ -2,7 +2,7 @@
 
 ## Summary
 
-This product is a `Next.js` commerce platform for curated China-sourced products aimed at Nigerians globally. Customers browse a local catalog, can view prices in `NGN` or `USD`, and always pay in `NGN`. The admin controls imports, catalog lifecycle, route management, warehouse operations, split payments, BI, and order statuses. `ELIM` is used only by admin flows, and the storefront never depends on live ELIM reads.
+This product is a `Next.js` commerce platform for curated China-sourced products aimed at Nigerians globally. Customers browse a local catalog priced natively in `CNY`, can toggle display between `CNY` and `NGN`, and always pay in `NGN`. Logistics invoices are generated later in `USD` after warehouse measurement and proof upload, then settled in `NGN`. The admin controls imports, catalog lifecycle, route management, warehouse operations, split payments, BI, and order statuses. `ELIM` is used only by admin flows, and the storefront never depends on live ELIM reads.
 
 ## Goals And Locked Scope
 
@@ -11,8 +11,12 @@ This product is a `Next.js` commerce platform for curated China-sourced products
 - Use `Paystack` as the only live payment provider in `v1`.
 - Support `Manual Upload` and `Fetch from API` as equal product creation paths.
 - Support `100+ URL` batch imports asynchronously.
-- Treat `USD` as display-only. Checkout and payment remain `NGN`.
+- Keep product pricing native in `CNY` and logistics invoicing native in `USD`.
+- Maintain exactly two live exchange rates in admin:
+  - `CNY -> NGN` for product-payment settlement
+  - `USD -> NGN` for shipping-payment settlement
 - Use a two-phase logistics model: product payment first, then shipping payment after warehouse measurement and proof upload.
+- Enforce MOQ everywhere through a global default plus optional product-level override.
 - Keep secrets env-only for ELIM and Paystack.
 
 Deferred to `v2`:
@@ -45,16 +49,17 @@ Catalog health:
 
 ### Pricing, Currency, And Logistics
 
-- Imported source pricing uses admin-managed `CNY -> NGN`.
-- `USD` is display-only for storefront browsing.
-- Checkout currency is always `NGN`.
+- Imported source pricing stays in `CNY`. There is no import-time currency conversion.
+- Storefront browsing defaults to `CNY`, with an `NGN` display toggle.
+- Product checkout currency is always `NGN`, using the active admin-managed `CNY -> NGN` rate.
 - Product and listing pages show product price only.
 - Product pages show product price only, while checkout captures route acceptance and terms.
 - Customer chooses an admin-managed shipping route and accepts its formula, ETA, and terms before product payment.
 - Product payment and shipping payment are separate flows and separate ledgers.
 - Final shipping is calculated only after warehouse measurement using the accepted route version.
+- Logistics invoices are shown to customers in `USD`, then settled in `NGN` using the active admin-managed `USD -> NGN` rate.
 - Product `weight` and `volume` are warehouse and pricing inputs, because air uses KG and sea uses CBM.
-- `MOQ` is admin-configurable and enforced in cart and checkout.
+- `MOQ` is admin-configurable through a global default plus optional product-level override, and it is enforced in cart and checkout.
 
 ### Buyer And Consignee Model
 
@@ -101,7 +106,7 @@ Visual split:
 
 ### Shared Shell
 
-- Header includes logo slot, search, category navigation, `NGN/USD` display toggle, account, and cart.
+- Header includes logo slot, search, category navigation, `CNY/NGN` display toggle, account, and cart.
 - Mobile uses a compact top bar and drawer-based navigation.
 - Footer includes trust links, support, FAQ, and policy pages.
 
@@ -110,7 +115,7 @@ Visual split:
 - Home should lead with trust, then discovery.
 - Featured collections and categories should feel curated, not promo-stacked.
 - Catalog and search pages use clean filter bars and 4:5 product cards.
-- Product cards show image, title, product price, and a subtle note that logistics is added at checkout.
+- Product cards show image, title, product price, MOQ, and a subtle note that logistics is invoiced later after warehouse proof.
 
 ### Product Detail
 
@@ -122,11 +127,11 @@ Visual split:
 ### Cart, Checkout, Dashboard
 
 - Guest cart is supported.
-- Cart shows product subtotal only and explains that logistics is added later.
-- Checkout flow: sign in, choose consignee, choose `Air` or `Sea`, review totals, pay with Paystack.
-- Checkout shows product subtotal, logistics per line item, logistics total, and grand total in `NGN`.
-- Customer dashboard includes `Orders`, `Consignees`, and `Account`.
-- Order tracking is status-driven with states `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled`.
+- Cart shows product subtotal only and explains that logistics is invoiced later after warehouse measurement.
+- Checkout flow: sign in, choose consignee, choose an admin-managed route, accept route terms, review product-only totals, pay with Paystack.
+- Checkout shows product subtotal in `CNY`, settlement preview in `NGN`, and no logistics charge in the first payment.
+- Customer dashboard includes `Orders`, `Consignees`, and `Account`, but the order area is treated as a service center for product receipts, warehouse proof, and logistics invoices.
+- Order tracking follows the two-phase lifecycle: `route_selected`, `paid_for_products`, `awaiting_warehouse`, `arrived_at_warehouse`, `weighed`, `awaiting_shipping_payment`, `shipping_paid`, `in_transit`, `arrived_destination`, `out_for_delivery`, `delivered`, `cancelled`.
 
 ## Admin UX
 
@@ -171,7 +176,7 @@ Visual split:
 
 ### Settings
 
-- Grouped sections for store profile, currency pairs, shipping config, pricing rules, sync controls, payment status, and admin security.
+- Grouped sections for integration health, `CNY -> NGN`, `USD -> NGN`, default MOQ, route ledger visibility, payment posture, sync controls, and admin security.
 - ELIM and Paystack secrets are env-only and never editable in UI.
 - Settings show health, configured/missing state, validation results, and last-success metadata.
 
@@ -198,9 +203,11 @@ This keeps Codex-compatible rules in the file placement Codex can actually load,
 - Imported products land in `Draft` first.
 - Batch import handles `100+ URLs` asynchronously with dedupe and progress visibility.
 - Product publish is blocked if weight or required route config is missing.
-- Checkout always pays in `NGN`, even when storefront display mode is `USD`.
+- Checkout always pays in `NGN`, even when storefront display mode is `CNY` or `NGN`.
 - Checkout captures route acceptance and charges product totals only.
 - Shipping payment becomes available only after warehouse measurement and proof upload.
+- Product prices remain stored in `CNY`, logistics invoices remain stored in `USD`, and both payment phases preserve native-currency plus settlement-currency snapshots.
+- Global default MOQ and product-level MOQ override both affect live cart and checkout validation.
 - Unavailable-source products are auto-hidden from storefront and listed in the dedicated review tab.
 - BI supports date filters, drilldowns, and exports.
 - Secrets are env-only and never editable in UI.

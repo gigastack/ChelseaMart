@@ -13,7 +13,8 @@ export function StorefrontFooter() {
         <div className="max-w-xl space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[rgb(var(--brand-950))]">Mart</p>
           <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-            Curated China-to-Nigeria commerce with calmer browsing, NGN-first checkout, and admin-managed sourcing.
+            Curated China-to-Nigeria commerce with CNY-first merchandising, NGN checkout settlement, and USD logistics
+            invoices generated only after warehouse proof exists.
           </p>
         </div>
         <div className="flex flex-wrap gap-4">

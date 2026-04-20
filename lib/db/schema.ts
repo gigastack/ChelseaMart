@@ -74,6 +74,12 @@ export const currencyPairs = pgTable(
   (table) => [unique("currency_pairs_base_quote_unique").on(table.baseCurrency, table.quoteCurrency)],
 );
 
+export const appSettings = pgTable("app_settings", {
+  id: text("id").primaryKey().default("singleton"),
+  defaultMoq: integer("default_moq").default(1).notNull(),
+  ...timestamps,
+});
+
 export const shippingConfigs = pgTable("shipping_configs", {
   id: uuid("id").defaultRandom().primaryKey(),
   route: checkoutRouteEnum("route").notNull().unique(),
@@ -126,8 +132,11 @@ export const products = pgTable(
     sourceType: productSourceTypeEnum("source_type").default("manual").notNull(),
     status: productStatusEnum("status").default("draft").notNull(),
     moq: integer("moq").default(1).notNull(),
+    moqOverride: integer("moq_override"),
     weightKg: numeric("weight_kg", { precision: 10, scale: 3 }).notNull(),
     volumeCbm: numeric("volume_cbm", { precision: 10, scale: 3 }),
+    basePriceCny: numeric("base_price_cny", { precision: 18, scale: 2 }).default("0").notNull(),
+    sellPriceCny: numeric("sell_price_cny", { precision: 18, scale: 2 }).default("0").notNull(),
     basePriceNgn: numeric("base_price_ngn", { precision: 18, scale: 2 }).notNull(),
     sellPriceNgn: numeric("sell_price_ngn", { precision: 18, scale: 2 }).notNull(),
     featured: boolean("featured").default(false).notNull(),
@@ -169,6 +178,7 @@ export const productVariants = pgTable("product_variants", {
   optionSummary: text("option_summary").notNull(),
   stockQuantity: integer("stock_quantity"),
   moq: integer("moq"),
+  priceOverrideCny: numeric("price_override_cny", { precision: 18, scale: 2 }),
   priceOverrideNgn: numeric("price_override_ngn", { precision: 18, scale: 2 }),
   ...timestamps,
 });
@@ -214,7 +224,11 @@ export const orders = pgTable(
     routeSnapshot: jsonb("route_snapshot"),
     status: orderStatusEnum("status").default("cart").notNull(),
     currency: text("currency").default("NGN").notNull(),
+    productSubtotalCny: numeric("product_subtotal_cny", { precision: 18, scale: 2 }).default("0").notNull(),
     productSubtotalNgn: numeric("product_subtotal_ngn", { precision: 18, scale: 2 }).notNull(),
+    productPaymentCnyToNgnRate: numeric("product_payment_cny_to_ngn_rate", { precision: 18, scale: 6 })
+      .default("1")
+      .notNull(),
     serviceFeeNgn: numeric("service_fee_ngn", { precision: 18, scale: 2 }).default("0").notNull(),
     productPaymentTotalNgn: numeric("product_payment_total_ngn", { precision: 18, scale: 2 }).default("0").notNull(),
     logisticsTotalNgn: numeric("logistics_total_ngn", { precision: 18, scale: 2 }).notNull(),
@@ -240,9 +254,14 @@ export const orderItems = pgTable("order_items", {
   productTitleSnapshot: text("product_title_snapshot").notNull(),
   quantity: integer("quantity").notNull(),
   moqSnapshot: integer("moq_snapshot").notNull(),
+  effectiveMoqSnapshot: integer("effective_moq_snapshot").default(1).notNull(),
   weightKgSnapshot: numeric("weight_kg_snapshot", { precision: 10, scale: 3 }),
   volumeCbmSnapshot: numeric("volume_cbm_snapshot", { precision: 10, scale: 3 }),
+  productUnitPriceCnySnapshot: numeric("product_unit_price_cny_snapshot", { precision: 18, scale: 2 })
+    .default("0")
+    .notNull(),
   productUnitPriceNgnSnapshot: numeric("product_unit_price_ngn_snapshot", { precision: 18, scale: 2 }).notNull(),
+  lineTotalCnySnapshot: numeric("line_total_cny_snapshot", { precision: 18, scale: 2 }).default("0").notNull(),
   logisticsFeeNgnSnapshot: numeric("logistics_fee_ngn_snapshot", { precision: 18, scale: 2 }).notNull(),
   lineTotalNgnSnapshot: numeric("line_total_ngn_snapshot", { precision: 18, scale: 2 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -262,6 +281,7 @@ export const orderShipments = pgTable("order_shipments", {
   weighingProofPath: text("weighing_proof_path"),
   weighingProofMimeType: text("weighing_proof_mime_type"),
   shippingQuoteSnapshot: jsonb("shipping_quote_snapshot"),
+  shippingCostUsd: numeric("shipping_cost_usd", { precision: 18, scale: 2 }),
   shippingCostNgn: numeric("shipping_cost_ngn", { precision: 18, scale: 2 }),
   customerNotifiedAt: timestamp("customer_notified_at", { withTimezone: true }),
   ...timestamps,
@@ -355,6 +375,7 @@ export const paystackEvents = pgTable("paystack_events", {
 });
 
 export const schema = {
+  appSettings,
   catalogAlerts,
   categories,
   consignees,

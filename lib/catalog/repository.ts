@@ -1,16 +1,20 @@
-import { desc, eq } from "drizzle-orm";
-import { getOptionalDatabaseClient } from "@/lib/db/client";
-import { categories, products } from "@/lib/db/schema";
+import { convertCnyToNgn } from "@/lib/pricing/calculate";
+import { formatMoney } from "@/lib/currency/format";
+import { getCommerceSettings } from "@/lib/settings/repository";
+import { resolveEffectiveMoq } from "@/lib/settings/commerce-settings";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 export type StorefrontProductRecord = {
   category: string;
   description: string;
+  effectiveMoq: number;
   id: string;
   imageUrl: string;
   longDescription: string;
   moq: number;
   priceDisplay: string;
+  priceDisplayNgn: string;
+  sellPriceCny: number;
   sellPriceNgn: number;
   slug: string;
   specs: string[];
@@ -19,22 +23,18 @@ export type StorefrontProductRecord = {
 };
 
 export type AdminCatalogProductRecord = {
+  effectiveMoq: number;
   id: string;
+  moqOverride: number | null;
+  priceCny: number;
   priceNgn: number;
   sourceType: "api" | "manual";
+  sourcePriceCny: number;
   status: "draft" | "live" | "removed" | "unavailable";
   title: string;
   updatedLabel: string;
   weightKg: number | null;
 };
-
-function formatNaira(value: number) {
-  return new Intl.NumberFormat("en-NG", {
-    currency: "NGN",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value);
-}
 
 function formatRelativeLabel(dateIso: string) {
   const date = new Date(dateIso);
@@ -44,50 +44,34 @@ function formatRelativeLabel(dateIso: string) {
   }).format(date);
 }
 
-export async function listStorefrontProducts() {
-  const databaseClient = getOptionalDatabaseClient();
-
-  if (databaseClient) {
-    const rows = await databaseClient
-      .select({
-        categoryName: categories.name,
-        coverImageUrl: products.coverImageUrl,
-        description: products.description,
-        id: products.id,
-        moq: products.moq,
-        sellPriceNgn: products.sellPriceNgn,
-        shortDescription: products.shortDescription,
-        slug: products.slug,
-        title: products.title,
-        weightKg: products.weightKg,
-      })
-      .from(products)
-      .leftJoin(categories, eq(products.categoryId, categories.id))
-      .where(eq(products.status, "live"))
-      .orderBy(desc(products.updatedAt));
-
-    return rows.map((product) => ({
-      category: product.categoryName ?? "Manual Upload",
-      description: product.shortDescription ?? "Manual-upload product ready for customer browsing.",
-      id: product.id,
-      imageUrl: product.coverImageUrl ?? "/ProductImage.jpg",
-      longDescription:
-        product.description ??
-        "This manual-upload product is persisted in the local catalog and priced independently from live ELIM reads.",
-      moq: product.moq,
-      priceDisplay: formatNaira(Number(product.sellPriceNgn ?? 0)),
-      sellPriceNgn: Number(product.sellPriceNgn ?? 0),
-      slug: product.slug,
-      specs: ["Manual upload", "Local catalog", "NGN checkout"],
-      title: product.title,
-      weightKg: Number(product.weightKg ?? 0),
-    }));
+function asNullableNumber(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
   }
 
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return Number(value);
+  }
+
+  return null;
+}
+
+function asNumber(value: unknown) {
+  return asNullableNumber(value) ?? 0;
+}
+
+export async function listStorefrontProducts() {
   const supabase = createSupabaseServiceRoleClient();
+  const settings = await getCommerceSettings();
   const { data, error } = await supabase
     .from("products")
-    .select("id, slug, title, short_description, description, moq, weight_kg, sell_price_ngn, cover_image_url, categories(name)")
+    .select(
+      "id, slug, title, short_description, description, moq_override, weight_kg, sell_price_cny, cover_image_url, categories(name)",
+    )
     .eq("status", "live")
     .order("updated_at", { ascending: false });
 
@@ -95,25 +79,40 @@ export async function listStorefrontProducts() {
     throw error;
   }
 
-  return (data ?? []).map((product) => ({
-    category:
-      product.categories && typeof product.categories === "object" && "name" in product.categories
-        ? String(product.categories.name)
-        : "Manual Upload",
-    description: product.short_description ?? "Manual-upload product ready for customer browsing.",
-    id: product.id,
-    imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
-    longDescription:
-      product.description ??
-      "This manual-upload product is persisted in the local catalog and priced independently from live ELIM reads.",
-    moq: product.moq,
-    priceDisplay: formatNaira(Number(product.sell_price_ngn ?? 0)),
-    sellPriceNgn: Number(product.sell_price_ngn ?? 0),
-    slug: product.slug,
-    specs: ["Manual upload", "Local catalog", "NGN checkout"],
-    title: product.title,
-    weightKg: Number(product.weight_kg ?? 0),
-  }));
+  return (data ?? []).map((product) => {
+    const sellPriceCny = asNumber(product.sell_price_cny);
+    const sellPriceNgn = convertCnyToNgn({
+      cnyToNgnRate: settings.cnyToNgnRate,
+      sourcePriceCny: sellPriceCny,
+    });
+    const effectiveMoq = resolveEffectiveMoq({
+      defaultMoq: settings.defaultMoq,
+      moqOverride: asNullableNumber(product.moq_override),
+    });
+
+    return {
+      category:
+        product.categories && typeof product.categories === "object" && "name" in product.categories
+          ? String(product.categories.name)
+          : "Manual Upload",
+      description: product.short_description ?? "Manual-upload product ready for customer browsing.",
+      effectiveMoq,
+      id: product.id,
+      imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
+      longDescription:
+        product.description ??
+        "This manual-upload product is persisted in the local catalog and priced independently from live ELIM reads.",
+      moq: effectiveMoq,
+      priceDisplay: formatMoney(sellPriceCny, "CNY"),
+      priceDisplayNgn: formatMoney(sellPriceNgn, "NGN"),
+      sellPriceCny,
+      sellPriceNgn,
+      slug: product.slug,
+      specs: ["Manual upload", "Local catalog", "CNY display / NGN payment"],
+      title: product.title,
+      weightKg: asNumber(product.weight_kg),
+    } satisfies StorefrontProductRecord;
+  });
 }
 
 export async function listStorefrontCategories() {
@@ -125,52 +124,40 @@ export async function findStorefrontProductBySlug(slug: string) {
 }
 
 export async function listAdminProducts() {
-  const databaseClient = getOptionalDatabaseClient();
-
-  if (databaseClient) {
-    const rows = await databaseClient
-      .select({
-        id: products.id,
-        priceNgn: products.sellPriceNgn,
-        sourceType: products.sourceType,
-        status: products.status,
-        title: products.title,
-        updatedAt: products.updatedAt,
-        weightKg: products.weightKg,
-      })
-      .from(products)
-      .orderBy(desc(products.updatedAt));
-
-    return rows.map((product) => ({
-      id: product.id,
-      priceNgn: Number(product.priceNgn ?? 0),
-      sourceType: product.sourceType,
-      status: product.status,
-      title: product.title,
-      updatedLabel: formatRelativeLabel(String(product.updatedAt)),
-      weightKg: product.weightKg ? Number(product.weightKg) : null,
-    }));
-  }
-
   const supabase = createSupabaseServiceRoleClient();
+  const settings = await getCommerceSettings();
   const { data, error } = await supabase
     .from("products")
-    .select("id, title, sell_price_ngn, source_type, status, updated_at, weight_kg")
+    .select("id, title, base_price_cny, moq_override, sell_price_cny, source_type, status, updated_at, weight_kg")
     .order("updated_at", { ascending: false });
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map((product) => ({
-    id: product.id,
-    priceNgn: Number(product.sell_price_ngn ?? 0),
-    sourceType: product.source_type,
-    status: product.status,
-    title: product.title,
-    updatedLabel: formatRelativeLabel(product.updated_at),
-    weightKg: product.weight_kg ? Number(product.weight_kg) : null,
-  }));
+  return (data ?? []).map((product) => {
+    const priceCny = asNumber(product.sell_price_cny);
+
+    return {
+      effectiveMoq: resolveEffectiveMoq({
+        defaultMoq: settings.defaultMoq,
+        moqOverride: asNullableNumber(product.moq_override),
+      }),
+      id: product.id,
+      moqOverride: asNullableNumber(product.moq_override),
+      priceCny,
+      priceNgn: convertCnyToNgn({
+        cnyToNgnRate: settings.cnyToNgnRate,
+        sourcePriceCny: priceCny,
+      }),
+      sourceType: product.source_type,
+      sourcePriceCny: asNumber(product.base_price_cny),
+      status: product.status,
+      title: product.title,
+      updatedLabel: formatRelativeLabel(product.updated_at),
+      weightKg: asNullableNumber(product.weight_kg),
+    } satisfies AdminCatalogProductRecord;
+  });
 }
 
 export async function findAdminProduct(productId: string) {

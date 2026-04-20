@@ -22,6 +22,7 @@ export type ProductPaymentStatus = "pending" | "paid" | "failed";
 export type ShippingPaymentStatus = "not_due" | "pending" | "paid" | "failed";
 
 export type Product = {
+  basePriceCny: number;
   id: string;
   slug: string;
   title: string;
@@ -29,10 +30,9 @@ export type Product = {
   categoryId: string | null;
   sourceType: "manual" | "api";
   status: ProductLifecycle;
-  moq: number;
+  moqOverride: number | null;
   weightKg: number;
-  basePriceNgn: number;
-  sellPriceNgn: number;
+  sellPriceCny: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -45,7 +45,7 @@ export type ProductSource = {
   sourceProductId: string;
   sourceUrl: string | null;
   sourceCurrency: CurrencyCode;
-  sourcePrice: number | null;
+  sourcePriceCny: number | null;
   sourcePayload: Record<string, unknown>;
   availabilityStatus: "unknown" | "available" | "unavailable";
   lastSyncedAt: string | null;
@@ -88,6 +88,10 @@ export type CurrencyPair = {
   quoteCurrency: CurrencyCode;
   rate: number;
   updatedAt: string;
+};
+
+export type AppSettings = {
+  defaultMoq: number;
 };
 
 export type ShippingRoute = {
@@ -136,6 +140,7 @@ export type ShipmentQuoteSnapshot = {
   pricePerCbm: number | null;
   pricePerKg: number | null;
   rateCurrency: CurrencyCode;
+  shippingCostUsd: number | null;
   usdToNgnRate: number | null;
 };
 
@@ -160,7 +165,9 @@ export type Order = {
   routeSnapshot: RouteAcceptanceSnapshot | null;
   status: OrderStatus;
   currency: "NGN";
+  productSubtotalCny: number;
   productSubtotalNgn: number;
+  productPaymentCnyToNgnRate: number;
   serviceFeeNgn: number;
   productPaymentTotalNgn: number;
   logisticsTotalNgn: number;
@@ -178,9 +185,11 @@ export type OrderItem = {
   productId: string | null;
   productTitleSnapshot: string;
   quantity: number;
-  moqSnapshot: number;
+  effectiveMoqSnapshot: number;
   weightKgSnapshot: number | null;
+  productUnitPriceCnySnapshot: number;
   productUnitPriceNgnSnapshot: number;
+  lineTotalCnySnapshot: number;
   logisticsFeeNgnSnapshot: number;
   lineTotalNgnSnapshot: number;
 };
@@ -194,6 +203,7 @@ export type OrderShipment = {
   measuredWeightKg: number | null;
   measurementBasis: MeasurementBasis | null;
   orderId: string;
+  shippingCostUsd: number | null;
   shippingCostNgn: number | null;
   shippingQuoteSnapshot: ShipmentQuoteSnapshot | null;
   weighingProofMimeType: string | null;

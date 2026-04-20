@@ -1,27 +1,27 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { StorefrontCurrencyProvider } from "@/components/storefront/currency-provider";
-import { ProductCard } from "@/components/storefront/product-card";
+import { ProductPurchasePanel } from "@/components/storefront/product-purchase-panel";
 
-describe("ProductCard", () => {
-  it("shows the product price, MOQ, and route availability note", () => {
+describe("ProductPurchasePanel", () => {
+  it("shows the effective MOQ and the two-phase payment explanation", () => {
     render(
       <StorefrontCurrencyProvider>
-        <ProductCard
+        <ProductPurchasePanel
           product={{
             category: "Lighting",
             description: "Curated desk lamp",
-            effectiveMoq: 2,
-            id: "p1",
+            effectiveMoq: 3,
+            id: "product-1",
             imageUrl: "/lamp.jpg",
-            longDescription: "Long form product detail",
-            moq: 2,
+            longDescription: "Calm editorial product detail.",
+            moq: 3,
             priceDisplay: "CN¥ 90.91",
             priceDisplayNgn: "NGN 20,000",
             sellPriceCny: 90.91,
             sellPriceNgn: 20000,
             slug: "desk-lamp",
-            specs: [],
+            specs: ["Air + Sea"],
             title: "Desk Lamp",
             weightKg: 1.4,
           }}
@@ -29,9 +29,9 @@ describe("ProductCard", () => {
       </StorefrontCurrencyProvider>,
     );
 
-    expect(screen.getByText("Desk Lamp")).toBeInTheDocument();
     expect(screen.getByText("CN¥ 90.91")).toBeInTheDocument();
-    expect(screen.getByText(/MOQ 2/i)).toBeInTheDocument();
-    expect(screen.getByText(/Air \+ Sea available/i)).toBeInTheDocument();
+    expect(screen.getByText("NGN 20,000 payable at checkout")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText(/shipping is invoiced later in usd/i)).toBeInTheDocument();
   });
 });

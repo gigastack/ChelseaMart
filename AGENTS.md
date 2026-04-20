@@ -15,10 +15,13 @@ Planned nested placement once the app exists:
 - Build a `Next.js` commerce platform with a public storefront and an admin surface.
 - `ELIM` is admin-only ingestion and sync. The storefront must never depend on live ELIM reads.
 - Use the local database as the storefront source of truth.
-- `USD` is display-only in `v1`. Checkout and payment are always `NGN`.
-- The product price is shown on listing and detail pages. Shipping is accepted at checkout but paid later after warehouse measurement and proof upload.
+- Product catalog pricing is `CNY`-native, with an admin-managed `CNY -> NGN` rate used for display and product settlement.
+- Logistics invoices are `USD`-native, with an admin-managed `USD -> NGN` rate used only when shipping payment is requested.
+- Customers always pay `NGN`, but both native-currency snapshots and settlement-currency snapshots must be preserved.
+- The product price is shown on listing and detail pages. Shipping route terms are accepted at checkout but logistics is billed only after warehouse measurement and proof upload.
 - Checkout route choice comes from admin-managed shipping routes and route versions, not a hardcoded geography model.
 - Product payment and shipping payment are separate ledgers, separate Paystack flows, and separate customer/admin states.
+- MOQ is enforced everywhere. Admin can set a global default MOQ and override it per product.
 - Availability audits are admin-triggered.
 
 ## tech stack defaults
@@ -51,6 +54,7 @@ Planned nested placement once the app exists:
 - Validate all external API payloads and form inputs before using them.
 - Once the hosted commerce schema is live, do not keep in-memory compatibility fallbacks in normal runtime paths. Fail clearly or block the workflow with actionable guidance.
 - Persist snapshot values used for orders so later settings changes do not rewrite historical totals.
+- Persist both native-currency and settlement-currency snapshots for product payment and shipping payment.
 - Keep buyer and consignee as separate models.
 - Keep ELIM source linkage and source snapshots for API-linked products.
 - Never silently overwrite live catalog content from a sync job.

@@ -5,9 +5,18 @@ const createSupabaseServerClientMock = vi.fn();
 const getPublicEnvMock = vi.fn(() => ({
   siteUrl: "http://localhost:3000",
 }));
+const getCommerceSettingsMock = vi.fn(async () => ({
+  cnyToNgnRate: 220,
+  defaultMoq: 1,
+  usdToNgnRate: 1600,
+}));
 
 vi.mock("@/lib/config/env", () => ({
   getPublicEnv: getPublicEnvMock,
+}));
+
+vi.mock("@/lib/settings/repository", () => ({
+  getCommerceSettings: getCommerceSettingsMock,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -31,8 +40,9 @@ function createProductsClient() {
                       data: [
                         {
                           cover_image_url: "/ProductImage.jpg",
+                          moq_override: null,
+                          sell_price_cny: 420,
                           id: "prod-1",
-                          sell_price_ngn: 92000,
                           slug: "manual-product-image-item",
                           title: "Product Image Sample",
                           weight_kg: 1.4,
@@ -133,6 +143,7 @@ describe("orders repository", () => {
     createSupabaseServiceRoleClientMock.mockReset();
     createSupabaseServerClientMock.mockReset();
     getPublicEnvMock.mockClear();
+    getCommerceSettingsMock.mockClear();
   });
 
   it("maps the live checkout cart item from products", async () => {
@@ -142,7 +153,9 @@ describe("orders repository", () => {
 
     await expect(listCheckoutCartItems()).resolves.toEqual([
       expect.objectContaining({
+        effectiveMoq: 1,
         productId: "prod-1",
+        sellPriceCny: 420,
         title: "Product Image Sample",
         weightKg: 1.4,
       }),

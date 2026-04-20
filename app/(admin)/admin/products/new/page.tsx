@@ -2,6 +2,7 @@ import { ProductEditor } from "@/components/admin/product-editor";
 import { ProductPublishRail } from "@/components/admin/product-publish-rail";
 import { CreateProductSourcePicker } from "@/components/admin/create-product-source-picker";
 import { Badge } from "@/components/ui/badge";
+import { getCommerceSettings } from "@/lib/settings/repository";
 
 type NewAdminProductPageProps = {
   searchParams: Promise<{
@@ -11,6 +12,8 @@ type NewAdminProductPageProps = {
 
 export default async function NewAdminProductPage({ searchParams }: NewAdminProductPageProps) {
   const { source } = await searchParams;
+  const settings = await getCommerceSettings();
+  const manualSellPriceCny = Number((68000 / settings.cnyToNgnRate).toFixed(2));
 
   if (source === "manual") {
     return (
@@ -31,9 +34,13 @@ export default async function NewAdminProductPage({ searchParams }: NewAdminProd
           <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
             <ProductEditor
               defaultValues={{
-                basePriceNgn: 68000,
-                moq: 1,
+                cnyToNgnRate: settings.cnyToNgnRate,
+                defaultMoq: settings.defaultMoq,
+                effectiveMoq: settings.defaultMoq,
+                moqOverride: null,
+                sellPriceCny: manualSellPriceCny,
                 shortDescription: "Manual-upload flagship product using ProductImage.jpg as the canonical QA asset.",
+                sourcePriceCny: manualSellPriceCny,
                 title: "Product Image Sample",
                 weightKg: 1.8,
               }}
@@ -41,6 +48,9 @@ export default async function NewAdminProductPage({ searchParams }: NewAdminProd
             />
             <ProductPublishRail
               blockingIssues={[]}
+              effectiveMoq={settings.defaultMoq}
+              moqOverride={null}
+              priceCny={manualSellPriceCny}
               priceNgn={68000}
               status="draft"
               title="Product Image Sample"

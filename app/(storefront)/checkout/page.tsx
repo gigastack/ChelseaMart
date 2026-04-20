@@ -3,14 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { requireAuthenticatedUser } from "@/lib/auth/guards";
 import { hasSupabaseAuthEnv } from "@/lib/config/env";
 import { listCheckoutCartItems, listCheckoutShippingRoutes, listConsignees } from "@/lib/orders/repository";
+import { getCommerceSettings } from "@/lib/settings/repository";
 
 export default async function CheckoutPage() {
   const user = hasSupabaseAuthEnv() ? await requireAuthenticatedUser("/checkout") : null;
 
-  const [cartItems, consignees, routes] = await Promise.all([
+  const [cartItems, consignees, routes, settings] = await Promise.all([
     listCheckoutCartItems(),
     listConsignees(user?.id),
     listCheckoutShippingRoutes(),
+    getCommerceSettings(),
   ]);
 
   return (
@@ -22,7 +24,12 @@ export default async function CheckoutPage() {
             Choose a route and pay for products only
           </h1>
         </div>
-        <CheckoutExperience cartItems={cartItems} consignees={consignees} routes={routes} />
+        <CheckoutExperience
+          cartItems={cartItems}
+          cnyToNgnRate={settings.cnyToNgnRate}
+          consignees={consignees}
+          routes={routes}
+        />
       </section>
     </main>
   );

@@ -28,6 +28,20 @@ type CalculateShippingChargeNgnInput =
       usdToNgnRate?: number;
     };
 
+type CalculateShippingInvoiceInput =
+  | {
+      measuredWeightKg: number;
+      mode: "air";
+      pricePerKgUsd: number;
+      usdToNgnRate: number;
+    }
+  | {
+      measuredVolumeCbm: number;
+      mode: "sea";
+      pricePerCbmUsd: number;
+      usdToNgnRate: number;
+    };
+
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -55,6 +69,38 @@ export function buildRouteAcceptanceSnapshot(input: BuildRouteAcceptanceSnapshot
     routeId: input.routeId,
     routeVersionId: input.routeVersionId,
     termsSummary: input.termsSummary,
+  };
+}
+
+export function calculateShippingInvoice(input: CalculateShippingInvoiceInput) {
+  if (input.mode === "air") {
+    if (!input.measuredWeightKg || input.measuredWeightKg <= 0) {
+      throw new Error("A positive warehouse weight is required for air shipping.");
+    }
+
+    const shippingCostUsd = roundMoney(input.measuredWeightKg * input.pricePerKgUsd);
+
+    return {
+      measurementBasis: "weight_kg" as const,
+      rateCurrency: "USD" as const,
+      shippingCostNgn: roundMoney(shippingCostUsd * input.usdToNgnRate),
+      shippingCostUsd,
+      usdToNgnRate: input.usdToNgnRate,
+    };
+  }
+
+  if (!input.measuredVolumeCbm || input.measuredVolumeCbm <= 0) {
+    throw new Error("A positive warehouse volume is required for sea shipping.");
+  }
+
+  const shippingCostUsd = roundMoney(input.measuredVolumeCbm * input.pricePerCbmUsd);
+
+  return {
+    measurementBasis: "volume_cbm" as const,
+    rateCurrency: "USD" as const,
+    shippingCostNgn: roundMoney(shippingCostUsd * input.usdToNgnRate),
+    shippingCostUsd,
+    usdToNgnRate: input.usdToNgnRate,
   };
 }
 

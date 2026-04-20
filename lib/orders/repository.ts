@@ -8,18 +8,25 @@ import type {
   ShippingMode,
   ShippingPaymentStatus,
 } from "@/lib/domain/types";
-import { buildRouteAcceptanceSnapshot, calculateShippingChargeNgn } from "@/lib/logistics/two-phase";
+import { formatMoney } from "@/lib/currency/format";
+import { convertCnyToNgn } from "@/lib/pricing/calculate";
+import { getCommerceSettings } from "@/lib/settings/repository";
+import { resolveEffectiveMoq } from "@/lib/settings/commerce-settings";
+import { buildRouteAcceptanceSnapshot, calculateShippingInvoice } from "@/lib/logistics/two-phase";
 import { createRouteAcceptedOrder } from "@/lib/orders/create-order";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 const DEFAULT_SERVICE_FEE_NGN = 0;
 
 export type CartItemRecord = {
+  effectiveMoq: number;
   id: string;
   imageUrl: string;
   priceDisplay: string;
+  priceDisplayNgn: string;
   productId: string;
   quantity: number;
+  sellPriceCny: number;
   sellPriceNgn: number;
   slug: string;
   title: string;
@@ -63,6 +70,7 @@ export type ShipmentRecord = {
   measuredVolumeCbm: number | null;
   measuredWeightKg: number | null;
   measurementBasis: MeasurementBasis | null;
+  shippingCostUsd: number | null;
   shippingCostNgn: number | null;
   shippingQuoteSnapshot: ShipmentQuoteSnapshot | null;
   weighingProofMimeType: string | null;
@@ -79,13 +87,16 @@ export type OrderRecord = {
   paymentReference: string | null;
   paymentStatus: ProductPaymentStatus;
   productPaymentReference: string | null;
+  productPaymentCnyToNgnRate: number;
   productPaymentState: ProductPaymentStatus;
+  productSubtotalCny: number;
   productPaymentTotalNgn: number;
   productSubtotalNgn: number;
   route: ShippingMode | null;
   routeSnapshot: RouteAcceptanceSnapshot | null;
   serviceFeeNgn: number;
   shipment: ShipmentRecord | null;
+  shippingCostUsd: number | null;
   shippingCostNgn: number | null;
   shippingPaymentReference: string | null;
   shippingPaymentState: ShippingPaymentStatus;
@@ -122,14 +133,6 @@ function formatCreatedLabel(dateIso: string) {
   }).format(date);
 }
 
-function formatNaira(value: number) {
-  return new Intl.NumberFormat("en-NG", {
-    currency: "NGN",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value);
-}
-
 function asNumber(value: unknown) {
   if (typeof value === "number") {
     return value;
@@ -162,16 +165,22 @@ function mapConsigneeRow(consignee: Record<string, unknown>): ConsigneeRecord {
 }
 
 function mapOrderItemRow(item: Record<string, unknown>): CartItemRecord {
+  const sellPriceCny = asNumber(item.product_unit_price_cny_snapshot ?? 0);
+  const sellPriceNgn = asNumber(item.product_unit_price_ngn_snapshot ?? 0);
+
   return {
+    effectiveMoq: asNumber(item.effective_moq_snapshot ?? item.moq_snapshot ?? 1),
     id: String(item.id),
     imageUrl:
       item.products && typeof item.products === "object" && "cover_image_url" in item.products
         ? String(item.products.cover_image_url ?? "/ProductImage.jpg")
         : "/ProductImage.jpg",
-    priceDisplay: formatNaira(asNumber(item.product_unit_price_ngn_snapshot ?? 0)),
+    priceDisplay: formatMoney(sellPriceCny, "CNY"),
+    priceDisplayNgn: formatMoney(sellPriceNgn, "NGN"),
     productId: String(item.product_id ?? item.id ?? "deleted-product"),
     quantity: asNumber(item.quantity ?? 1),
-    sellPriceNgn: asNumber(item.product_unit_price_ngn_snapshot ?? 0),
+    sellPriceCny,
+    sellPriceNgn,
     slug:
       item.products && typeof item.products === "object" && "slug" in item.products
         ? String(item.products.slug ?? "manual-product-image-item")
@@ -200,6 +209,7 @@ function mapShipmentRow(shipment: Record<string, unknown> | null | undefined): S
       shipment.measurement_basis === "weight_kg" || shipment.measurement_basis === "volume_cbm"
         ? shipment.measurement_basis
         : null,
+    shippingCostUsd: asNullableNumber(shipment.shipping_cost_usd),
     shippingCostNgn: asNullableNumber(shipment.shipping_cost_ngn),
     shippingQuoteSnapshot:
       shipment.shipping_quote_snapshot && typeof shipment.shipping_quote_snapshot === "object"
@@ -240,10 +250,12 @@ function mapOrderRow(order: Record<string, unknown>): OrderRecord {
         ? order.product_payment_state
         : "pending",
     productPaymentReference: productPaymentReference || null,
+    productPaymentCnyToNgnRate: asNumber(order.product_payment_cny_to_ngn_rate ?? 1),
     productPaymentState:
       order.product_payment_state === "paid" || order.product_payment_state === "failed"
         ? order.product_payment_state
         : "pending",
+    productSubtotalCny: asNumber(order.product_subtotal_cny ?? 0),
     productPaymentTotalNgn: asNumber(order.product_payment_total_ngn ?? order.product_subtotal_ngn ?? 0),
     productSubtotalNgn: asNumber(order.product_subtotal_ngn ?? 0),
     route: order.route === "air" || order.route === "sea" ? order.route : null,
@@ -253,6 +265,7 @@ function mapOrderRow(order: Record<string, unknown>): OrderRecord {
         : null,
     serviceFeeNgn: asNumber(order.service_fee_ngn ?? 0),
     shipment,
+    shippingCostUsd: shipment?.shippingCostUsd ?? asNullableNumber(order.shipping_cost_usd),
     shippingCostNgn: asNullableNumber(order.shipping_cost_ngn),
     shippingPaymentReference: shippingPaymentReference || null,
     shippingPaymentState:
@@ -270,7 +283,7 @@ async function selectOrders(where: { orderId?: string; userId?: string } = {}) {
   let query = supabase
     .from("orders")
     .select(
-      "id, consignee_id, route, shipping_route_id, shipping_route_version_id, route_accepted, route_accepted_at, route_snapshot, status, currency, product_subtotal_ngn, service_fee_ngn, product_payment_total_ngn, logistics_total_ngn, shipping_cost_ngn, grand_total_ngn, payment_reference, product_payment_state, shipping_payment_state, created_at, order_items(id, product_id, product_title_snapshot, quantity, moq_snapshot, weight_kg_snapshot, volume_cbm_snapshot, product_unit_price_ngn_snapshot, logistics_fee_ngn_snapshot, line_total_ngn_snapshot, products(slug, cover_image_url)), order_shipments(id, measurement_basis, measured_weight_kg, measured_volume_cbm, measured_at, measured_by_profile_id, weighing_proof_path, weighing_proof_mime_type, shipping_quote_snapshot, shipping_cost_ngn, customer_notified_at), product_payments(id, payment_reference, status, amount_ngn, paid_at), shipping_payments(id, payment_reference, status, amount_ngn, paid_at)",
+      "id, consignee_id, route, shipping_route_id, shipping_route_version_id, route_accepted, route_accepted_at, route_snapshot, status, currency, product_subtotal_cny, product_subtotal_ngn, product_payment_cny_to_ngn_rate, service_fee_ngn, product_payment_total_ngn, logistics_total_ngn, shipping_cost_ngn, grand_total_ngn, payment_reference, product_payment_state, shipping_payment_state, created_at, order_items(id, product_id, product_title_snapshot, quantity, moq_snapshot, effective_moq_snapshot, weight_kg_snapshot, volume_cbm_snapshot, product_unit_price_cny_snapshot, product_unit_price_ngn_snapshot, logistics_fee_ngn_snapshot, line_total_cny_snapshot, line_total_ngn_snapshot, products(slug, cover_image_url)), order_shipments(id, measurement_basis, measured_weight_kg, measured_volume_cbm, measured_at, measured_by_profile_id, weighing_proof_path, weighing_proof_mime_type, shipping_quote_snapshot, shipping_cost_usd, shipping_cost_ngn, customer_notified_at), product_payments(id, payment_reference, status, amount_ngn, paid_at), shipping_payments(id, payment_reference, status, amount_ngn, paid_at)",
     )
     .order("created_at", { ascending: false });
 
@@ -355,9 +368,10 @@ async function getShippingRoutesWithVersions() {
 
 export async function listCheckoutCartItems() {
   const supabase = createSupabaseServiceRoleClient();
+  const settings = await getCommerceSettings();
   const { data, error } = await supabase
     .from("products")
-    .select("id, slug, title, sell_price_ngn, weight_kg, volume_cbm, cover_image_url")
+    .select("id, slug, title, moq_override, sell_price_cny, weight_kg, volume_cbm, cover_image_url")
     .eq("status", "live")
     .order("featured", { ascending: false })
     .limit(1);
@@ -367,12 +381,27 @@ export async function listCheckoutCartItems() {
   }
 
   return (data ?? []).map((product) => ({
+    effectiveMoq: resolveEffectiveMoq({
+      defaultMoq: settings.defaultMoq,
+      moqOverride: asNullableNumber(product.moq_override),
+    }),
     id: `cart-${product.id}`,
     imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
-    priceDisplay: formatNaira(asNumber(product.sell_price_ngn ?? 0)),
+    priceDisplay: formatMoney(asNumber(product.sell_price_cny ?? 0), "CNY"),
+    priceDisplayNgn: formatMoney(
+      convertCnyToNgn({
+        cnyToNgnRate: settings.cnyToNgnRate,
+        sourcePriceCny: asNumber(product.sell_price_cny ?? 0),
+      }),
+      "NGN",
+    ),
     productId: product.id,
     quantity: 1,
-    sellPriceNgn: asNumber(product.sell_price_ngn ?? 0),
+    sellPriceCny: asNumber(product.sell_price_cny ?? 0),
+    sellPriceNgn: convertCnyToNgn({
+      cnyToNgnRate: settings.cnyToNgnRate,
+      sourcePriceCny: asNumber(product.sell_price_cny ?? 0),
+    }),
     slug: product.slug,
     title: product.title,
     volumeCbm: asNullableNumber(product.volume_cbm),
@@ -492,6 +521,7 @@ export async function createConsigneeForUser(
 
 export async function createRouteAcceptedOrderRecord(input: RouteAcceptedOrderInput) {
   const route = (await listCheckoutShippingRoutes()).find((candidate) => candidate.id === input.shippingRouteId);
+  const settings = await getCommerceSettings();
 
   if (!route) {
     throw new Error("Choose a valid shipping route before product payment.");
@@ -511,11 +541,13 @@ export async function createRouteAcceptedOrderRecord(input: RouteAcceptedOrderIn
 
   const orderDraft = createRouteAcceptedOrder({
     cartItems: input.cartItems.map((item) => ({
+      effectiveMoq: item.effectiveMoq,
       productId: item.productId,
       quantity: item.quantity,
-      sellPriceNgn: item.sellPriceNgn,
+      sellPriceCny: item.sellPriceCny,
       title: item.title,
     })),
+    cnyToNgnRate: settings.cnyToNgnRate,
     consigneeId: input.consigneeId,
     routeSnapshot,
     serviceFeeNgn: DEFAULT_SERVICE_FEE_NGN,
@@ -532,8 +564,10 @@ export async function createRouteAcceptedOrderRecord(input: RouteAcceptedOrderIn
       logistics_total_ngn: 0,
       payment_reference: null,
       payment_status: "pending",
+      product_payment_cny_to_ngn_rate: orderDraft.productPaymentCnyToNgnRate,
       product_payment_state: "pending",
       product_payment_total_ngn: orderDraft.productPaymentTotalNgn,
+      product_subtotal_cny: orderDraft.productSubtotalCny,
       product_subtotal_ngn: orderDraft.productSubtotalNgn,
       route: route.mode,
       route_accepted: true,
@@ -555,17 +589,20 @@ export async function createRouteAcceptedOrderRecord(input: RouteAcceptedOrderIn
 
   const orderId = String(orderData.id);
   const { error: itemsError } = await supabase.from("order_items").insert(
-    input.cartItems.map((item) => ({
-      line_total_ngn_snapshot: item.sellPriceNgn * item.quantity,
+    orderDraft.items.map((item) => ({
+      effective_moq_snapshot: item.effectiveMoqSnapshot,
+      line_total_cny_snapshot: item.lineTotalCnySnapshot,
+      line_total_ngn_snapshot: item.lineTotalNgnSnapshot,
       logistics_fee_ngn_snapshot: 0,
-      moq_snapshot: 1,
+      moq_snapshot: item.moqSnapshot,
       order_id: orderId,
       product_id: item.productId,
-      product_title_snapshot: item.title,
-      product_unit_price_ngn_snapshot: item.sellPriceNgn,
+      product_title_snapshot: item.productTitleSnapshot,
+      product_unit_price_cny_snapshot: item.productUnitPriceCnySnapshot,
+      product_unit_price_ngn_snapshot: item.productUnitPriceNgnSnapshot,
       quantity: item.quantity,
-      volume_cbm_snapshot: item.volumeCbm,
-      weight_kg_snapshot: item.weightKg,
+      volume_cbm_snapshot: input.cartItems.find((cartItem) => cartItem.productId === item.productId)?.volumeCbm ?? null,
+      weight_kg_snapshot: input.cartItems.find((cartItem) => cartItem.productId === item.productId)?.weightKg ?? null,
     })),
   );
 
@@ -877,6 +914,7 @@ export async function recordWarehouseMeasurement(input: {
   proofPath: string;
 }) {
   const supabase = createSupabaseServiceRoleClient();
+  const settings = await getCommerceSettings();
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .select("id, route, shipping_route_version_id, product_payment_total_ngn")
@@ -889,7 +927,7 @@ export async function recordWarehouseMeasurement(input: {
 
   const { data: version, error: versionError } = await supabase
     .from("shipping_route_versions")
-    .select("formula_kind, price_per_kg, price_per_cbm, rate_currency, usd_to_ngn_rate")
+    .select("formula_kind, price_per_kg, price_per_cbm")
     .eq("id", order.shipping_route_version_id)
     .single();
 
@@ -897,21 +935,19 @@ export async function recordWarehouseMeasurement(input: {
     throw versionError;
   }
 
-  const shippingCostNgn =
+  const invoice =
     order.route === "sea"
-      ? calculateShippingChargeNgn({
+      ? calculateShippingInvoice({
           measuredVolumeCbm: input.measuredValue,
           mode: "sea",
-          pricePerCbm: asNumber(version.price_per_cbm ?? 0),
-          rateCurrency: version.rate_currency === "USD" ? "USD" : "NGN",
-          usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate) ?? undefined,
+          pricePerCbmUsd: asNumber(version.price_per_cbm ?? 0),
+          usdToNgnRate: settings.usdToNgnRate,
         })
-      : calculateShippingChargeNgn({
+      : calculateShippingInvoice({
           measuredWeightKg: input.measuredValue,
           mode: "air",
-          pricePerKg: asNumber(version.price_per_kg ?? 0),
-          rateCurrency: version.rate_currency === "USD" ? "USD" : "NGN",
-          usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate) ?? undefined,
+          pricePerKgUsd: asNumber(version.price_per_kg ?? 0),
+          usdToNgnRate: settings.usdToNgnRate,
         });
 
   const measurementBasis: MeasurementBasis = order.route === "sea" ? "volume_cbm" : "weight_kg";
@@ -921,8 +957,9 @@ export async function recordWarehouseMeasurement(input: {
     mode: String(order.route) as ShippingMode,
     pricePerCbm: asNullableNumber(version.price_per_cbm),
     pricePerKg: asNullableNumber(version.price_per_kg),
-    rateCurrency: version.rate_currency === "USD" ? "USD" : "NGN",
-    usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate),
+    rateCurrency: invoice.rateCurrency,
+    shippingCostUsd: invoice.shippingCostUsd,
+    usdToNgnRate: invoice.usdToNgnRate,
   };
 
   const { data: shipment, error: shipmentError } = await supabase
@@ -936,7 +973,8 @@ export async function recordWarehouseMeasurement(input: {
         measured_weight_kg: measurementBasis === "weight_kg" ? input.measuredValue : null,
         measurement_basis: measurementBasis,
         order_id: input.orderId,
-        shipping_cost_ngn: shippingCostNgn,
+        shipping_cost_ngn: invoice.shippingCostNgn,
+        shipping_cost_usd: invoice.shippingCostUsd,
         shipping_quote_snapshot: quoteSnapshot,
         weighing_proof_mime_type: input.proofMimeType,
         weighing_proof_path: input.proofPath,
@@ -968,9 +1006,14 @@ export async function recordWarehouseMeasurement(input: {
     const { error: shippingPaymentError } = await supabase
       .from("shipping_payments")
       .update({
-        amount_ngn: shippingCostNgn,
+        amount_ngn: invoice.shippingCostNgn,
         paid_at: null,
         payment_reference: null,
+        payload: {
+          shippingCostUsd: invoice.shippingCostUsd,
+          shippingCostNgn: invoice.shippingCostNgn,
+          usdToNgnRate: invoice.usdToNgnRate,
+        },
         provider: "paystack",
         shipment_id: shipment.id,
         status: "pending",
@@ -986,8 +1029,13 @@ export async function recordWarehouseMeasurement(input: {
     const { data: shippingPayment, error: shippingPaymentError } = await supabase
       .from("shipping_payments")
       .insert({
-        amount_ngn: shippingCostNgn,
+        amount_ngn: invoice.shippingCostNgn,
         order_id: input.orderId,
+        payload: {
+          shippingCostUsd: invoice.shippingCostUsd,
+          shippingCostNgn: invoice.shippingCostNgn,
+          usdToNgnRate: invoice.usdToNgnRate,
+        },
         provider: "paystack",
         shipment_id: shipment.id,
         status: "pending",
@@ -1002,13 +1050,13 @@ export async function recordWarehouseMeasurement(input: {
     shippingPaymentId = String(shippingPayment.id);
   }
 
-  const grandTotal = asNumber(order.product_payment_total_ngn ?? 0) + shippingCostNgn;
+  const grandTotal = asNumber(order.product_payment_total_ngn ?? 0) + invoice.shippingCostNgn;
   const { error: updateError } = await supabase
     .from("orders")
     .update({
       grand_total_ngn: grandTotal,
-      logistics_total_ngn: shippingCostNgn,
-      shipping_cost_ngn: shippingCostNgn,
+      logistics_total_ngn: invoice.shippingCostNgn,
+      shipping_cost_ngn: invoice.shippingCostNgn,
       shipping_payment_state: "pending",
       status: "awaiting_shipping_payment",
     })
@@ -1033,7 +1081,8 @@ export async function recordWarehouseMeasurement(input: {
 
   return {
     paymentId: shippingPaymentId,
-    shippingCostNgn,
+    shippingCostNgn: invoice.shippingCostNgn,
+    shippingCostUsd: invoice.shippingCostUsd,
     shipmentId: String(shipment.id),
   };
 }

@@ -4,16 +4,13 @@ import { OrderStatusPanel } from "@/components/admin/order-status-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMoney } from "@/lib/currency/format";
 import type { ConsigneeRecord, OrderRecord } from "@/lib/orders/repository";
 
 type AdminOrderDetailPageProps = {
   consignee: ConsigneeRecord | null;
   order: OrderRecord | null;
 };
-
-function formatNgn(value: number) {
-  return `NGN ${value.toLocaleString("en-NG")}`;
-}
 
 function formatStatusLabel(status: string) {
   return status.replaceAll("_", " ");
@@ -29,13 +26,46 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
   return (
     <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Badge>Order detail</Badge>
-          <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{order.id}</h1>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{order.id}</h1>
+            <p className="max-w-3xl text-base leading-7 text-[rgb(var(--text-secondary))]">
+              Admin sees the full two-phase ledger here: accepted route snapshot, CNY product reference, USD logistics
+              invoice, proof asset, and the operational actions that push the order through warehouse and delivery.
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.9fr)]">
           <div className="grid gap-6">
+            <Card className="border-none bg-[linear-gradient(180deg,rgba(var(--surface-card),0.98)_0%,rgba(var(--surface-alt),0.94)_100%)]">
+              <CardHeader>
+                <CardDescription>Settlement ledger</CardDescription>
+                <CardTitle>{formatMoney(order.grandTotalNgn, "NGN")}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 text-sm text-[rgb(var(--text-secondary))] md:grid-cols-2">
+                <div className="space-y-2 border-t border-[rgb(var(--border-subtle))] pt-4">
+                  <p>Product payment: {formatStatusLabel(order.productPaymentState)}</p>
+                  <p>Shipping payment: {formatStatusLabel(order.shippingPaymentState)}</p>
+                  <p>Product subtotal: {formatMoney(order.productSubtotalCny, "CNY")}</p>
+                  <p>Product settlement: {formatMoney(order.productPaymentTotalNgn, "NGN")}</p>
+                </div>
+                <div className="space-y-2 border-t border-[rgb(var(--border-subtle))] pt-4">
+                  <p>
+                    Logistics invoice:{" "}
+                    {order.shippingCostUsd === null ? "Pending warehouse proof" : formatMoney(order.shippingCostUsd, "USD")}
+                  </p>
+                  <p>
+                    Shipping payable in NGN:{" "}
+                    {order.shippingCostNgn === null ? "Pending invoice" : formatMoney(order.shippingCostNgn, "NGN")}
+                  </p>
+                  <p>Service fee: {formatMoney(order.serviceFeeNgn, "NGN")}</p>
+                  <p>Measured shipment: {order.shipment?.measurementBasis ? formatStatusLabel(order.shipment.measurementBasis) : "Awaiting warehouse entry"}</p>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardDescription>Consignee</CardDescription>
@@ -69,12 +99,17 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
             <Card>
               <CardHeader>
                 <CardDescription>Payments and shipment</CardDescription>
-                <CardTitle>{formatNgn(order.grandTotalNgn)}</CardTitle>
+                <CardTitle>
+                  {order.shippingCostUsd === null ? "Awaiting measurement" : formatMoney(order.shippingCostUsd, "USD")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-[rgb(var(--text-secondary))]">
-                <p>Product payment: {formatStatusLabel(order.productPaymentState)}</p>
-                <p>Shipping payment: {formatStatusLabel(order.shippingPaymentState)}</p>
-                <p>Shipping invoice: {order.shippingCostNgn === null ? "Pending measurement" : formatNgn(order.shippingCostNgn)}</p>
+                <p>Product payment ledger: {formatMoney(order.productSubtotalCny, "CNY")} / {formatMoney(order.productPaymentTotalNgn, "NGN")}</p>
+                <p>Shipping payment state: {formatStatusLabel(order.shippingPaymentState)}</p>
+                <p>
+                  Shipping invoice payable in NGN:{" "}
+                  {order.shippingCostNgn === null ? "Pending measurement" : formatMoney(order.shippingCostNgn, "NGN")}
+                </p>
                 <p>Measured shipment: {order.shipment?.measurementBasis ? formatStatusLabel(order.shipment.measurementBasis) : "Awaiting warehouse entry"}</p>
                 <p>
                   Proof:{" "}
@@ -113,7 +148,7 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
               <Card>
                 <CardHeader>
                   <CardDescription>Warehouse measurement</CardDescription>
-                  <CardTitle>Record shipment size and proof</CardTitle>
+                  <CardTitle>Record shipment size, proof, and invoice trigger</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form action={recordWarehouseMeasurementAction} className="grid gap-4">
@@ -139,6 +174,10 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
                         type="file"
                       />
                     </label>
+                    <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
+                      Saving this form uploads proof, snapshots the warehouse measurement, and creates the USD logistics
+                      invoice the customer will later settle in NGN.
+                    </p>
                     <Button type="submit">Generate shipping invoice</Button>
                   </form>
                 </CardContent>

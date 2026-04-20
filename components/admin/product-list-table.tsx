@@ -3,9 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeader, DataTableRow } from "@/components/ui/table";
 
 export type AdminProductRow = {
+  effectiveMoq: number;
   id: string;
+  moqOverride: number | null;
+  priceCny: number;
   priceNgn: number;
   sourceType: "api" | "manual";
+  sourcePriceCny: number;
   status: "draft" | "live" | "removed" | "unavailable";
   title: string;
   updatedLabel: string;
@@ -24,6 +28,14 @@ function formatNaira(value: number) {
   }).format(value);
 }
 
+function formatCny(value: number) {
+  return new Intl.NumberFormat("zh-CN", {
+    currency: "CNY",
+    maximumFractionDigits: 2,
+    style: "currency",
+  }).format(value);
+}
+
 export function ProductListTable({ products }: ProductListTableProps) {
   return (
     <DataTable>
@@ -32,8 +44,9 @@ export function ProductListTable({ products }: ProductListTableProps) {
           <DataTableHead>Product</DataTableHead>
           <DataTableHead>Status</DataTableHead>
           <DataTableHead>Source</DataTableHead>
+          <DataTableHead>MOQ</DataTableHead>
           <DataTableHead>Weight</DataTableHead>
-          <DataTableHead>Price</DataTableHead>
+          <DataTableHead>Pricing</DataTableHead>
           <DataTableHead>Updated</DataTableHead>
         </DataTableRow>
       </DataTableHeader>
@@ -49,8 +62,17 @@ export function ProductListTable({ products }: ProductListTableProps) {
               <Badge>{product.status}</Badge>
             </DataTableCell>
             <DataTableCell>{product.sourceType}</DataTableCell>
+            <DataTableCell>
+              {product.effectiveMoq}
+              <div className="text-xs text-[rgb(var(--text-secondary))]">
+                {product.moqOverride === null ? "global default" : "product override"}
+              </div>
+            </DataTableCell>
             <DataTableCell>{product.weightKg ? `${product.weightKg} kg` : "Missing"}</DataTableCell>
-            <DataTableCell>{formatNaira(product.priceNgn)}</DataTableCell>
+            <DataTableCell>
+              <div className="font-medium text-[rgb(var(--text-primary))]">{formatCny(product.priceCny)}</div>
+              <div className="text-xs text-[rgb(var(--text-secondary))]">{formatNaira(product.priceNgn)} payable</div>
+            </DataTableCell>
             <DataTableCell>{product.updatedLabel}</DataTableCell>
           </DataTableRow>
         ))}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRouteAcceptanceSnapshot,
-  calculateShippingChargeNgn,
+  calculateShippingInvoice,
 } from "@/lib/logistics/two-phase";
 
 describe("two-phase logistics", () => {
@@ -31,36 +31,46 @@ describe("two-phase logistics", () => {
     });
   });
 
-  it("calculates air shipping charges from actual warehouse weight", () => {
-    const result = calculateShippingChargeNgn({
+  it("calculates an air shipping invoice in USD and payable NGN", () => {
+    const result = calculateShippingInvoice({
       measuredWeightKg: 12.4,
       mode: "air",
-      pricePerKg: 8,
-      rateCurrency: "USD",
+      pricePerKgUsd: 8,
       usdToNgnRate: 1600,
     });
 
-    expect(result).toBe(158720);
+    expect(result).toEqual({
+      measurementBasis: "weight_kg",
+      rateCurrency: "USD",
+      shippingCostNgn: 158720,
+      shippingCostUsd: 99.2,
+      usdToNgnRate: 1600,
+    });
   });
 
-  it("calculates sea shipping charges from measured CBM volume", () => {
-    const result = calculateShippingChargeNgn({
+  it("calculates a sea shipping invoice in USD and payable NGN", () => {
+    const result = calculateShippingInvoice({
       measuredVolumeCbm: 1.8,
       mode: "sea",
-      pricePerCbm: 55000,
-      rateCurrency: "NGN",
+      pricePerCbmUsd: 45,
+      usdToNgnRate: 1600,
     });
 
-    expect(result).toBe(99000);
+    expect(result).toEqual({
+      measurementBasis: "volume_cbm",
+      rateCurrency: "USD",
+      shippingCostNgn: 129600,
+      shippingCostUsd: 81,
+      usdToNgnRate: 1600,
+    });
   });
 
   it("rejects incomplete warehouse measurements", () => {
     expect(() =>
-      calculateShippingChargeNgn({
+      calculateShippingInvoice({
         measuredWeightKg: 0,
         mode: "air",
-        pricePerKg: 8,
-        rateCurrency: "USD",
+        pricePerKgUsd: 8,
         usdToNgnRate: 1600,
       }),
     ).toThrow(/weight/i);

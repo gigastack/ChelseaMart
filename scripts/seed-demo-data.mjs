@@ -216,6 +216,7 @@ function buildQuoteSnapshot(input) {
     pricePerCbm: input.pricePerCbm ?? null,
     pricePerKg: input.pricePerKg ?? null,
     rateCurrency: input.rateCurrency,
+    shippingCostUsd: input.shippingCostUsd ?? null,
     usdToNgnRate: input.usdToNgnRate ?? null,
   };
 }
@@ -342,6 +343,16 @@ async function seedDemoData() {
     { onConflict: "base_currency,quote_currency" },
   );
 
+  await supabase.from("app_settings").upsert(
+    [
+      {
+        default_moq: 1,
+        id: "singleton",
+      },
+    ],
+    { onConflict: "id" },
+  );
+
   await supabase.from("shipping_routes").upsert(
     [
       {
@@ -386,9 +397,10 @@ async function seedDemoData() {
         formula_kind: "per_cbm",
         formula_label: "Sea Freight = Price per CBM × Total Volume",
         id: ids.shippingRouteVersionSea,
-        price_per_cbm: 55000,
-        rate_currency: "NGN",
+        price_per_cbm: 34.38,
+        rate_currency: "USD",
         route_id: ids.shippingRouteSea,
+        usd_to_ngn_rate: 1600,
         version_label: "April 2026 Sea Tariff",
       },
     ],
@@ -398,6 +410,7 @@ async function seedDemoData() {
   await supabase.from("products").upsert(
     [
       {
+        base_price_cny: 418.18,
         base_price_ngn: 92000,
         category_id: ids.categoryFashion,
         cover_image_url: "/ProductImage.jpg",
@@ -405,6 +418,8 @@ async function seedDemoData() {
         featured: true,
         id: ids.manualProduct,
         moq: 1,
+        moq_override: 1,
+        sell_price_cny: 418.18,
         sell_price_ngn: 92000,
         short_description: "Manual-upload sample product backed by seeded Supabase data.",
         slug: "manual-product-image-item",
@@ -415,6 +430,7 @@ async function seedDemoData() {
         weight_kg: 1.4,
       },
       {
+        base_price_cny: 345.45,
         base_price_ngn: 76000,
         category_id: ids.categoryLighting,
         cover_image_url: "/ProductImage.jpg",
@@ -422,6 +438,8 @@ async function seedDemoData() {
         featured: false,
         id: ids.apiProduct,
         moq: 2,
+        moq_override: 2,
+        sell_price_cny: 368.18,
         sell_price_ngn: 81000,
         short_description: "ELIM-linked test product for admin QA.",
         slug: "elim-floor-lamp",
@@ -513,8 +531,10 @@ async function seedDemoData() {
         payment_reference: "demo-product-paystack-ref-1001",
         payment_status: "paid",
         payment_verified_at: "2026-04-17T09:15:00.000Z",
+        product_payment_cny_to_ngn_rate: 220,
         product_payment_state: "paid",
         product_payment_total_ngn: 92000,
+        product_subtotal_cny: 418.18,
         product_subtotal_ngn: 92000,
         route: "air",
         route_accepted: true,
@@ -537,8 +557,10 @@ async function seedDemoData() {
         payment_reference: "demo-product-paystack-ref-1000",
         payment_status: "paid",
         payment_verified_at: "2026-04-16T15:45:00.000Z",
+        product_payment_cny_to_ngn_rate: 220,
         product_payment_state: "paid",
         product_payment_total_ngn: 92000,
+        product_subtotal_cny: 418.18,
         product_subtotal_ngn: 92000,
         route: "sea",
         route_accepted: true,
@@ -579,6 +601,8 @@ async function seedDemoData() {
 
   await supabase.from("order_items").insert([
     {
+      effective_moq_snapshot: 1,
+      line_total_cny_snapshot: 418.18,
       id: ids.orderItemAwaitingShippingPayment,
       line_total_ngn_snapshot: 92000,
       logistics_fee_ngn_snapshot: 0,
@@ -586,12 +610,15 @@ async function seedDemoData() {
       order_id: ids.customerOrderAwaitingShippingPayment,
       product_id: ids.manualProduct,
       product_title_snapshot: "Product Image Sample",
+      product_unit_price_cny_snapshot: 418.18,
       product_unit_price_ngn_snapshot: 92000,
       quantity: 1,
       volume_cbm_snapshot: 0.2,
       weight_kg_snapshot: 1.4,
     },
     {
+      effective_moq_snapshot: 1,
+      line_total_cny_snapshot: 418.18,
       id: ids.orderItemShippingPaid,
       line_total_ngn_snapshot: 92000,
       logistics_fee_ngn_snapshot: 0,
@@ -599,6 +626,7 @@ async function seedDemoData() {
       order_id: ids.customerOrderShippingPaid,
       product_id: ids.manualProduct,
       product_title_snapshot: "Product Image Sample",
+      product_unit_price_cny_snapshot: 418.18,
       product_unit_price_ngn_snapshot: 92000,
       quantity: 1,
       volume_cbm_snapshot: 0.2,
@@ -640,6 +668,7 @@ async function seedDemoData() {
         measured_weight_kg: 1.65,
         measurement_basis: "weight_kg",
         order_id: ids.customerOrderAwaitingShippingPayment,
+        shipping_cost_usd: 16.5,
         shipping_cost_ngn: 26400,
         shipping_quote_snapshot: buildQuoteSnapshot({
           formulaKind: "per_kg",
@@ -647,6 +676,7 @@ async function seedDemoData() {
           mode: "air",
           pricePerKg: 10,
           rateCurrency: "USD",
+          shippingCostUsd: 16.5,
           usdToNgnRate: 1600,
         }),
         weighing_proof_mime_type: "image/jpeg",
@@ -660,13 +690,16 @@ async function seedDemoData() {
         measured_volume_cbm: 0.2,
         measurement_basis: "volume_cbm",
         order_id: ids.customerOrderShippingPaid,
+        shipping_cost_usd: 6.88,
         shipping_cost_ngn: 11000,
         shipping_quote_snapshot: buildQuoteSnapshot({
           formulaKind: "per_cbm",
           measurementBasis: "volume_cbm",
           mode: "sea",
-          pricePerCbm: 55000,
-          rateCurrency: "NGN",
+          pricePerCbm: 34.38,
+          rateCurrency: "USD",
+          shippingCostUsd: 6.88,
+          usdToNgnRate: 1600,
         }),
         weighing_proof_mime_type: "image/jpeg",
         weighing_proof_path: "/ProductImage.jpg",

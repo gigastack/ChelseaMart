@@ -2,6 +2,7 @@ import { ProductEditor } from "@/components/admin/product-editor";
 import { ProductPublishRail } from "@/components/admin/product-publish-rail";
 import { Badge } from "@/components/ui/badge";
 import { findAdminProduct } from "@/lib/catalog/repository";
+import { getCommerceSettings } from "@/lib/settings/repository";
 
 type ProductEditorPageProps = {
   params: Promise<{
@@ -11,7 +12,7 @@ type ProductEditorPageProps = {
 
 export default async function AdminProductEditorPage({ params }: ProductEditorPageProps) {
   const { productId } = await params;
-  const product = await findAdminProduct(productId);
+  const [product, settings] = await Promise.all([findAdminProduct(productId), getCommerceSettings()]);
   const isManual = product?.sourceType === "manual";
   const weightMissing = !product?.weightKg;
 
@@ -34,9 +35,13 @@ export default async function AdminProductEditorPage({ params }: ProductEditorPa
         <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
           <ProductEditor
             defaultValues={{
-              basePriceNgn: product?.priceNgn ?? 68000,
-              moq: 1,
+              cnyToNgnRate: settings.cnyToNgnRate,
+              defaultMoq: settings.defaultMoq,
+              effectiveMoq: product?.effectiveMoq ?? settings.defaultMoq,
+              moqOverride: product?.moqOverride ?? null,
+              sellPriceCny: product?.priceCny ?? Number((68000 / settings.cnyToNgnRate).toFixed(2)),
               shortDescription: `Draft editor for ${productId}`,
+              sourcePriceCny: product?.sourcePriceCny ?? product?.priceCny ?? Number((68000 / settings.cnyToNgnRate).toFixed(2)),
               title: product?.title ?? "Product Image Sample",
               weightKg: product?.weightKg ?? null,
             }}
@@ -44,6 +49,9 @@ export default async function AdminProductEditorPage({ params }: ProductEditorPa
           />
           <ProductPublishRail
             blockingIssues={weightMissing ? ["weight_required"] : []}
+            effectiveMoq={product?.effectiveMoq ?? settings.defaultMoq}
+            moqOverride={product?.moqOverride ?? null}
+            priceCny={product?.priceCny ?? Number((68000 / settings.cnyToNgnRate).toFixed(2))}
             priceNgn={product?.priceNgn ?? 68000}
             status={product?.status ?? "draft"}
             title={product?.title ?? "Product Image Sample"}

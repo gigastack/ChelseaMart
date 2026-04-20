@@ -1,53 +1,36 @@
 import { describe, expect, it } from "vitest";
 import {
-  calculateLineLogisticsNgn,
   convertCnyToNgn,
-  quoteOrderTotals,
+  convertUsdToNgn,
+  sumProductPaymentTotals,
 } from "@/lib/pricing/calculate";
 
 describe("pricing domain", () => {
-  it("converts ELIM source pricing from CNY to NGN", () => {
+  it("converts a CNY product price into NGN at checkout time", () => {
     expect(convertCnyToNgn({ cnyToNgnRate: 220, sourcePriceCny: 10 })).toBe(2200);
   });
 
-  it("calculates per-line logistics with an NGN floor", () => {
-    expect(
-      calculateLineLogisticsNgn({
-        minimumFeeNgn: 15000,
-        pricePerKgUsd: 5,
-        quantity: 1,
-        usdToNgnRate: 1200,
-        weightKg: 2,
-      }),
-    ).toBe(15000);
+  it("converts a USD logistics invoice into NGN for payment", () => {
+    expect(convertUsdToNgn({ sourcePriceUsd: 81, usdToNgnRate: 1600 })).toBe(129600);
   });
 
-  it("quotes checkout totals by summing product subtotal and route-based logistics", () => {
-    const result = quoteOrderTotals({
-      items: [
-        {
-          productTitle: "Office chair",
-          quantity: 2,
-          sellPriceNgn: 55000,
-          weightKg: 3,
-        },
-        {
-          productTitle: "Desk lamp",
-          quantity: 1,
-          sellPriceNgn: 18000,
-          weightKg: 1.5,
-        },
-      ],
-      routeConfig: {
-        minimumFeeNgn: 10000,
-        pricePerKgUsd: 4.5,
-      },
-      usdToNgnRate: 1200,
-    });
+  it("sums product-payment totals while preserving both CNY and NGN snapshots", () => {
+    const items = [
+      { effectiveMoq: 2, quantity: 2, sellPriceCny: 250 },
+      { effectiveMoq: 1, quantity: 1, sellPriceCny: 80 },
+    ];
+    const result = sumProductPaymentTotals({ cnyToNgnRate: 220, items });
 
-    expect(result.productSubtotalNgn).toBe(128000);
+    expect(result.productSubtotalCny).toBe(580);
     expect(result.lines).toHaveLength(2);
-    expect(result.logisticsTotalNgn).toBe(42400);
-    expect(result.grandTotalNgn).toBe(170400);
+    expect(result.productSubtotalNgn).toBe(127600);
+    expect(result.lines[0]).toMatchObject({
+      effectiveMoq: 2,
+      lineTotalCny: 500,
+      lineTotalNgn: 110000,
+      productUnitPriceCny: 250,
+      productUnitPriceNgn: 55000,
+      quantity: 2,
+    });
   });
 });

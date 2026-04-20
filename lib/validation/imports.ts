@@ -30,11 +30,11 @@ export const elimProductPayloadSchema = z.object({
 
 export const normalizedImportProductSchema = z.object({
   product: z.object({
-    basePriceNgn: z.number().nonnegative(),
+    basePriceCny: z.number().nonnegative(),
     coverImageUrl: z.string().url().nullable(),
-    moq: z.number().int().positive(),
+    moqOverride: z.null(),
     publishBlockingIssues: z.array(z.enum(["weight_required", "shipping_config_required"])),
-    sellPriceNgn: z.number().nonnegative(),
+    sellPriceCny: z.number().nonnegative(),
     shortDescription: z.string().nullable(),
     slug: z.string().trim().min(1),
     sourceType: z.literal("api"),

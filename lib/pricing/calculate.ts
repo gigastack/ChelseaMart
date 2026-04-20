@@ -3,39 +3,34 @@ type ConvertCnyToNgnInput = {
   sourcePriceCny: number;
 };
 
-type CalculateLineLogisticsInput = {
-  minimumFeeNgn: number;
-  pricePerKgUsd: number;
-  quantity: number;
-  usdToNgnRate: number;
-  weightKg: number;
-};
-
-type QuoteOrderItem = {
-  productTitle: string;
-  quantity: number;
-  sellPriceNgn: number;
-  weightKg: number;
-};
-
-type QuoteOrderTotalsInput = {
-  items: QuoteOrderItem[];
-  routeConfig: Pick<CalculateLineLogisticsInput, "minimumFeeNgn" | "pricePerKgUsd">;
+type ConvertUsdToNgnInput = {
+  sourcePriceUsd: number;
   usdToNgnRate: number;
 };
 
-type QuoteOrderLine = {
-  logisticsFeeNgn: number;
-  productTitle: string;
-  productSubtotalNgn: number;
+type ProductPaymentItem = {
+  effectiveMoq: number;
   quantity: number;
-  weightKg: number;
+  sellPriceCny: number;
 };
 
-type QuoteOrderTotalsResult = {
-  grandTotalNgn: number;
-  lines: QuoteOrderLine[];
-  logisticsTotalNgn: number;
+type SumProductPaymentTotalsInput = {
+  cnyToNgnRate: number;
+  items: ProductPaymentItem[];
+};
+
+type ProductPaymentLine = {
+  effectiveMoq: number;
+  lineTotalCny: number;
+  lineTotalNgn: number;
+  productUnitPriceCny: number;
+  productUnitPriceNgn: number;
+  quantity: number;
+};
+
+type SumProductPaymentTotalsResult = {
+  lines: ProductPaymentLine[];
+  productSubtotalCny: number;
   productSubtotalNgn: number;
 };
 
@@ -47,48 +42,50 @@ export function convertCnyToNgn({ cnyToNgnRate, sourcePriceCny }: ConvertCnyToNg
   return roundCurrency(sourcePriceCny * cnyToNgnRate);
 }
 
-export function calculateLineLogisticsNgn({
-  minimumFeeNgn,
-  pricePerKgUsd,
-  quantity,
-  usdToNgnRate,
-  weightKg,
-}: CalculateLineLogisticsInput) {
-  const rawFee = pricePerKgUsd * usdToNgnRate * weightKg * quantity;
-  return roundCurrency(Math.max(rawFee, minimumFeeNgn));
+export function convertUsdToNgn({ sourcePriceUsd, usdToNgnRate }: ConvertUsdToNgnInput) {
+  return roundCurrency(sourcePriceUsd * usdToNgnRate);
 }
 
-export function quoteOrderTotals({
+export function sumProductPaymentTotals({
+  cnyToNgnRate,
   items,
-  routeConfig,
-  usdToNgnRate,
-}: QuoteOrderTotalsInput): QuoteOrderTotalsResult {
+}: SumProductPaymentTotalsInput): SumProductPaymentTotalsResult {
   const lines = items.map((item) => {
-    const productSubtotalNgn = roundCurrency(item.sellPriceNgn * item.quantity);
-    const logisticsFeeNgn = calculateLineLogisticsNgn({
-      minimumFeeNgn: routeConfig.minimumFeeNgn,
-      pricePerKgUsd: routeConfig.pricePerKgUsd,
-      quantity: item.quantity,
-      usdToNgnRate,
-      weightKg: item.weightKg,
+    if (!Number.isInteger(item.effectiveMoq) || item.effectiveMoq <= 0) {
+      throw new Error("Effective MOQ must be a positive integer.");
+    }
+
+    if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+      throw new Error("Quantity must be a positive integer.");
+    }
+
+    if (item.quantity < item.effectiveMoq) {
+      throw new Error(`Quantity must be at least the effective MOQ of ${item.effectiveMoq}.`);
+    }
+
+    const productUnitPriceNgn = convertCnyToNgn({
+      cnyToNgnRate,
+      sourcePriceCny: item.sellPriceCny,
     });
+    const lineTotalCny = roundCurrency(item.sellPriceCny * item.quantity);
+    const lineTotalNgn = roundCurrency(productUnitPriceNgn * item.quantity);
 
     return {
-      logisticsFeeNgn,
-      productSubtotalNgn,
-      productTitle: item.productTitle,
+      effectiveMoq: item.effectiveMoq,
+      lineTotalCny,
+      lineTotalNgn,
+      productUnitPriceCny: item.sellPriceCny,
+      productUnitPriceNgn,
       quantity: item.quantity,
-      weightKg: item.weightKg,
     };
   });
 
-  const productSubtotalNgn = roundCurrency(lines.reduce((sum, line) => sum + line.productSubtotalNgn, 0));
-  const logisticsTotalNgn = roundCurrency(lines.reduce((sum, line) => sum + line.logisticsFeeNgn, 0));
+  const productSubtotalCny = roundCurrency(lines.reduce((sum, line) => sum + line.lineTotalCny, 0));
+  const productSubtotalNgn = roundCurrency(lines.reduce((sum, line) => sum + line.lineTotalNgn, 0));
 
   return {
-    grandTotalNgn: roundCurrency(productSubtotalNgn + logisticsTotalNgn),
     lines,
-    logisticsTotalNgn,
+    productSubtotalCny,
     productSubtotalNgn,
   };
 }

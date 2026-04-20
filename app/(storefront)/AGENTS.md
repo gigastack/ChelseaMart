@@ -10,8 +10,9 @@ These rules apply to files under `app/(storefront)/`.
   - oxidized teal as the main brand accent
   - brass only for restrained premium emphasis
 - Do not introduce ad hoc promo colors, discount-market styling, or dense dashboard card stacks.
-- Product and catalog screens show product price only. Logistics belongs to checkout.
-- `USD` may affect display only. Checkout and payment messaging must remain `NGN`-first.
+- Product and catalog screens show product price only. Logistics belongs to the accepted-route and post-warehouse-payment flow.
+- Catalog pricing is `CNY`-native, with `NGN` available as a display toggle and settlement preview.
+- Logistics invoices are shown in `USD`, while payment messaging remains explicit that customers settle in `NGN`.
 
 ## ux behavior
 
@@ -21,6 +22,7 @@ These rules apply to files under `app/(storefront)/`.
 - Use fluid transitions for route changes, active filters, drawers, and cart state where they improve continuity.
 - Avoid global smooth-scroll wrappers unless the experience is long-form and content-led. If introduced later, keep it storefront-only.
 - Checkout must clearly separate buyer identity, consignee selection, route choice, and order review.
+- MOQ must be clearly visible anywhere quantity can be changed, and quantities below the effective MOQ must be blocked.
 - Customer order tracking is status-driven. Do not imply carrier-grade live tracking when it does not exist.
 
 ## implementation

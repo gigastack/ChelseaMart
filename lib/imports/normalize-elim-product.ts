@@ -1,13 +1,13 @@
-import { convertCnyToNgn } from "@/lib/pricing/calculate";
 import {
   elimProductPayloadSchema,
   normalizedImportProductSchema,
   type ElimProductPayload,
   type NormalizedImportProduct,
 } from "@/lib/validation/imports";
+import { resolveEffectiveMoq } from "@/lib/settings/commerce-settings";
 
 type NormalizeElimProductOptions = {
-  cnyToNgnRate: number;
+  defaultMoq: number;
 };
 
 function slugify(input: string) {
@@ -23,18 +23,15 @@ export function normalizeElimProduct(
   options: NormalizeElimProductOptions,
 ): NormalizedImportProduct {
   const parsedPayload = elimProductPayloadSchema.parse(payload);
-  const basePriceNgn = convertCnyToNgn({
-    cnyToNgnRate: options.cnyToNgnRate,
-    sourcePriceCny: parsedPayload.priceCny,
-  });
+  resolveEffectiveMoq({ defaultMoq: options.defaultMoq, moqOverride: null });
 
   return normalizedImportProductSchema.parse({
     product: {
-      basePriceNgn,
+      basePriceCny: parsedPayload.priceCny,
       coverImageUrl: parsedPayload.images[0] ?? null,
-      moq: 1,
+      moqOverride: null,
       publishBlockingIssues: ["weight_required"],
-      sellPriceNgn: basePriceNgn,
+      sellPriceCny: parsedPayload.priceCny,
       shortDescription: null,
       slug: slugify(parsedPayload.title || parsedPayload.productId) || parsedPayload.productId.toLowerCase(),
       sourceType: "api",

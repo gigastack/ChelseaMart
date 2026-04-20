@@ -1,19 +1,18 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function PricingRulesForm() {
   return (
-    <div className="grid gap-4 rounded-[var(--radius-lg)] border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] p-6">
-      <h2 className="text-xl font-semibold text-[rgb(var(--text-primary))]">Pricing rules</h2>
-      <label className="grid gap-2 text-sm font-medium text-[rgb(var(--text-primary))]">
-        Default markup (%)
-        <Input defaultValue="0" inputMode="decimal" />
-      </label>
-      <label className="grid gap-2 text-sm font-medium text-[rgb(var(--text-primary))]">
-        Draft stale threshold (days)
-        <Input defaultValue="3" inputMode="numeric" />
-      </label>
-      <Button>Save pricing rules</Button>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardDescription>Operating policy</CardDescription>
+        <CardTitle>Two-phase settlement rules</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3 text-sm leading-6 text-[rgb(var(--text-secondary))]">
+        <p>1. Catalog browse stays CNY-native, with NGN as a customer display toggle only.</p>
+        <p>2. Product payment converts CNY to NGN at checkout and settles immediately through Paystack.</p>
+        <p>3. Logistics remains uncollected until warehouse measurement, proof upload, and USD invoice creation.</p>
+        <p>4. Shipping payment converts that USD invoice to NGN for customer settlement without rewriting history.</p>
+      </CardContent>
+    </Card>
   );
 }

@@ -14,7 +14,7 @@ describe("runImportJob", () => {
     }));
 
     const result = await runImportJob({
-      cnyToNgnRate: 220,
+      defaultMoq: 3,
       entries: [
         { type: "url", value: "https://detail.1688.com/offer/1.html" },
         { type: "url", value: "https://detail.1688.com/offer/1.html" },
@@ -29,6 +29,8 @@ describe("runImportJob", () => {
     expect(result.summary.importedCount).toBe(1);
     expect(result.summary.duplicateCount).toBe(2);
     expect(result.createdProducts).toHaveLength(1);
+    expect(result.createdProducts[0]?.product.sellPriceCny).toBe(30);
+    expect(result.createdProducts[0]?.product.moqOverride).toBeNull();
     expect(result.createdProducts[0]?.source.sourcePlatform).toBe("alibaba");
     expect(result.jobItems.map((item) => item.status)).toEqual(["imported", "duplicate", "duplicate"]);
   });

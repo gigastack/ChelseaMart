@@ -7,26 +7,37 @@ import { CheckoutSummary } from "@/components/storefront/checkout-summary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CartItemRecord, ConsigneeRecord, ShippingRouteRecord } from "@/lib/orders/repository";
+import { sumProductPaymentTotals } from "@/lib/pricing/calculate";
 
 type CheckoutExperienceProps = {
   cartItems: CartItemRecord[];
+  cnyToNgnRate: number;
   consignees: ConsigneeRecord[];
   routes: ShippingRouteRecord[];
 };
 
-function buildSummary(cartItems: CartItemRecord[]) {
-  const productSubtotalNgn = cartItems.reduce((sum, item) => sum + item.sellPriceNgn * item.quantity, 0);
+function buildSummary(cartItems: CartItemRecord[], cnyToNgnRate: number) {
+  const { productSubtotalCny, productSubtotalNgn } = sumProductPaymentTotals({
+    cnyToNgnRate,
+    items: cartItems.map((item) => ({
+      effectiveMoq: item.effectiveMoq,
+      quantity: item.quantity,
+      sellPriceCny: item.sellPriceCny,
+    })),
+  });
   const serviceFeeNgn = 0;
 
   return {
+    cnyToNgnRate,
     currency: "NGN" as const,
     payNowTotalNgn: productSubtotalNgn + serviceFeeNgn,
+    productSubtotalCny,
     productSubtotalNgn,
     serviceFeeNgn,
   };
 }
 
-export function CheckoutExperience({ cartItems, consignees, routes }: CheckoutExperienceProps) {
+export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes }: CheckoutExperienceProps) {
   const defaultConsignee = consignees.find((consignee) => consignee.isDefault) ?? consignees[0];
   const [selectedRouteId, setSelectedRouteId] = useState(routes[0]?.id ?? "");
   const [selectedConsigneeId, setSelectedConsigneeId] = useState(defaultConsignee?.id ?? "");
@@ -35,7 +46,7 @@ export function CheckoutExperience({ cartItems, consignees, routes }: CheckoutEx
     () => routes.find((route) => route.id === selectedRouteId) ?? routes[0] ?? null,
     [routes, selectedRouteId],
   );
-  const summary = useMemo(() => buildSummary(cartItems), [cartItems]);
+  const summary = useMemo(() => buildSummary(cartItems, cnyToNgnRate), [cartItems, cnyToNgnRate]);
 
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
@@ -107,8 +118,9 @@ export function CheckoutExperience({ cartItems, consignees, routes }: CheckoutEx
           <input name="shippingRouteId" type="hidden" value={selectedRouteId} />
           <input name="acceptTerms" type="hidden" value={acceptTerms ? "accepted" : "pending"} />
           <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-            Displayed prices may appear in USD while browsing, but payment is processed in NGN before Paystack is
-            initialized. Shipping payment is collected later, after warehouse proof confirms the shipment size.
+            Catalog prices stay native in CNY while browsing. Product payment is converted to NGN at the current admin
+            rate before Paystack initializes, then shipping is invoiced later in USD and settled in NGN after
+            warehouse proof confirms the shipment size.
           </p>
           <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-[rgb(var(--text-secondary))]">
             <input
