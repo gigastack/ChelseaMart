@@ -1,8 +1,25 @@
 export type ProductLifecycle = "draft" | "live" | "removed" | "unavailable";
-export type CheckoutRoute = "air" | "sea";
-export type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 export type CurrencyCode = "NGN" | "USD" | "CNY";
 export type ElimPlatform = "alibaba" | "taobao";
+export type ShippingMode = "air" | "sea";
+export type CheckoutRoute = ShippingMode;
+export type MeasurementBasis = "weight_kg" | "volume_cbm";
+export type OrderStatus =
+  | "cart"
+  | "route_selected"
+  | "paid_for_products"
+  | "awaiting_warehouse"
+  | "arrived_at_warehouse"
+  | "weighed"
+  | "awaiting_shipping_payment"
+  | "shipping_paid"
+  | "in_transit"
+  | "arrived_destination"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
+export type ProductPaymentStatus = "pending" | "paid" | "failed";
+export type ShippingPaymentStatus = "not_due" | "pending" | "paid" | "failed";
 
 export type Product = {
   id: string;
@@ -73,6 +90,55 @@ export type CurrencyPair = {
   updatedAt: string;
 };
 
+export type ShippingRoute = {
+  id: string;
+  active: boolean;
+  destinationLabel: string;
+  etaDaysMax: number;
+  etaDaysMin: number;
+  formulaLabel: string;
+  mode: ShippingMode;
+  originLabel: string;
+  termsSummary: string;
+  title: string;
+  updatedAt: string;
+};
+
+export type ShippingRouteVersion = {
+  active: boolean;
+  formulaKind: "per_cbm" | "per_kg";
+  formulaLabel: string;
+  id: string;
+  pricePerCbm: number | null;
+  pricePerKg: number | null;
+  rateCurrency: CurrencyCode;
+  routeId: string;
+  usdToNgnRate: number | null;
+  versionLabel: string;
+};
+
+export type RouteAcceptanceSnapshot = {
+  destinationLabel: string;
+  etaDaysMax: number;
+  etaDaysMin: number;
+  formulaLabel: string;
+  mode: ShippingMode;
+  originLabel: string;
+  routeId: string;
+  routeVersionId: string;
+  termsSummary: string;
+};
+
+export type ShipmentQuoteSnapshot = {
+  formulaKind: "per_cbm" | "per_kg";
+  measurementBasis: MeasurementBasis;
+  mode: ShippingMode;
+  pricePerCbm: number | null;
+  pricePerKg: number | null;
+  rateCurrency: CurrencyCode;
+  usdToNgnRate: number | null;
+};
+
 export type ShippingConfig = {
   id: string;
   route: CheckoutRoute;
@@ -86,13 +152,23 @@ export type Order = {
   id: string;
   userId: string;
   consigneeId: string;
-  route: CheckoutRoute;
+  route: CheckoutRoute | null;
+  shippingRouteId: string | null;
+  shippingRouteVersionId: string | null;
+  routeAccepted: boolean;
+  routeAcceptedAt: string | null;
+  routeSnapshot: RouteAcceptanceSnapshot | null;
   status: OrderStatus;
   currency: "NGN";
   productSubtotalNgn: number;
+  serviceFeeNgn: number;
+  productPaymentTotalNgn: number;
   logisticsTotalNgn: number;
+  shippingCostNgn: number | null;
   grandTotalNgn: number;
   paymentReference: string | null;
+  productPaymentState: ProductPaymentStatus;
+  shippingPaymentState: ShippingPaymentStatus;
   createdAt: string;
 };
 
@@ -103,10 +179,36 @@ export type OrderItem = {
   productTitleSnapshot: string;
   quantity: number;
   moqSnapshot: number;
-  weightKgSnapshot: number;
+  weightKgSnapshot: number | null;
   productUnitPriceNgnSnapshot: number;
   logisticsFeeNgnSnapshot: number;
   lineTotalNgnSnapshot: number;
+};
+
+export type OrderShipment = {
+  customerNotifiedAt: string | null;
+  id: string;
+  measuredAt: string | null;
+  measuredByProfileId: string | null;
+  measuredVolumeCbm: number | null;
+  measuredWeightKg: number | null;
+  measurementBasis: MeasurementBasis | null;
+  orderId: string;
+  shippingCostNgn: number | null;
+  shippingQuoteSnapshot: ShipmentQuoteSnapshot | null;
+  weighingProofMimeType: string | null;
+  weighingProofPath: string | null;
+};
+
+export type OrderPayment = {
+  amountNgn: number;
+  id: string;
+  orderId: string;
+  paidAt: string | null;
+  paymentReference: string | null;
+  paymentType: "product" | "shipping";
+  provider: "paystack";
+  status: ProductPaymentStatus | ShippingPaymentStatus;
 };
 
 export type OrderStatusEvent = {

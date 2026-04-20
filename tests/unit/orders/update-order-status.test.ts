@@ -5,15 +5,15 @@ describe("updateOrderStatus", () => {
   it("records an audit event and returns the new status", async () => {
     const result = await updateOrderStatus({
       actorId: "admin-1",
-      currentStatus: "processing",
-      nextStatus: "shipped",
+      currentStatus: "shipping_paid",
+      nextStatus: "in_transit",
       orderId: "order-1",
     });
 
-    expect(result.status).toBe("shipped");
+    expect(result.status).toBe("in_transit");
     expect(result.auditEvent).toMatchObject({
       orderId: "order-1",
-      status: "shipped",
+      status: "in_transit",
     });
   });
 });

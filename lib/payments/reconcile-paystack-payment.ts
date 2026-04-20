@@ -1,4 +1,5 @@
-import { findOrderByPaymentReference, recordPaystackEvent, updateOrderPaymentState } from "@/lib/orders/repository";
+import { reconcileProductPaystackPayment } from "@/lib/payments/reconcile-product-payment";
+import { reconcileShippingPaystackPayment } from "@/lib/payments/reconcile-shipping-payment";
 
 type ReconcilePaystackPaymentInput = {
   eventType: string;
@@ -8,57 +9,28 @@ type ReconcilePaystackPaymentInput = {
   transactionStatus: string;
 };
 
-function deriveOrderStatus(transactionStatus: string) {
-  switch (transactionStatus) {
-    case "success":
-      return {
-        orderStatus: "confirmed" as const,
-        paymentStatus: "paid" as const,
-      };
-    case "abandoned":
-    case "failed":
-      return {
-        orderStatus: "cancelled" as const,
-        paymentStatus: "failed" as const,
-      };
-    default:
-      return {
-        orderStatus: "pending" as const,
-        paymentStatus: "pending" as const,
-      };
-  }
-}
-
 export async function reconcilePaystackPayment(input: ReconcilePaystackPaymentInput) {
-  const order = await findOrderByPaymentReference(input.paymentReference);
+  const productResult = await reconcileProductPaystackPayment(input);
 
-  if (!order) {
+  if (productResult.state !== "missing-order") {
     return {
-      orderId: null,
-      state: "missing-order" as const,
+      ...productResult,
+      phase: "product" as const,
     };
   }
 
-  const nextState = deriveOrderStatus(input.transactionStatus);
-  const dedupeKey = `${input.eventType}:${input.paymentReference}:${nextState.paymentStatus}`;
+  const shippingResult = await reconcileShippingPaystackPayment(input);
 
-  await recordPaystackEvent({
-    dedupeKey,
-    eventType: input.eventType,
-    orderId: order.id,
-    payload: input.payload,
-    paymentReference: input.paymentReference,
-  });
-
-  await updateOrderPaymentState({
-    note: input.note,
-    orderId: order.id,
-    paymentStatus: nextState.paymentStatus,
-    status: nextState.orderStatus,
-  });
+  if (shippingResult.state !== "missing-order") {
+    return {
+      ...shippingResult,
+      phase: "shipping" as const,
+    };
+  }
 
   return {
-    orderId: order.id,
-    state: nextState.paymentStatus,
+    orderId: null,
+    phase: null,
+    state: "missing-order" as const,
   };
 }

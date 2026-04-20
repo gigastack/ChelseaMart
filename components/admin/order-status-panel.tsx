@@ -4,13 +4,24 @@ import { updateOrderStatusAction } from "@/app/(admin)/admin/orders/actions";
 import type { OrderStatus } from "@/lib/domain/types";
 
 const nextStatusLabels: Record<OrderStatus, string[]> = {
+  arrived_at_warehouse: [],
+  arrived_destination: ["out_for_delivery", "cancelled"],
+  awaiting_shipping_payment: [],
+  awaiting_warehouse: ["arrived_at_warehouse", "cancelled"],
   cancelled: [],
-  confirmed: ["processing", "cancelled"],
+  cart: [],
   delivered: [],
-  pending: ["confirmed", "cancelled"],
-  processing: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
+  in_transit: ["arrived_destination", "cancelled"],
+  out_for_delivery: ["delivered", "cancelled"],
+  paid_for_products: ["awaiting_warehouse", "cancelled"],
+  route_selected: ["cancelled"],
+  shipping_paid: ["in_transit", "cancelled"],
+  weighed: [],
 };
+
+function formatStatusLabel(status: string) {
+  return status.replaceAll("_", " ");
+}
 
 type OrderStatusPanelProps = {
   orderId: string;
@@ -22,7 +33,7 @@ export function OrderStatusPanel({ orderId, status }: OrderStatusPanelProps) {
     <div className="space-y-4 rounded-[var(--radius-lg)] border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] p-6">
       <div className="space-y-2">
         <Badge>Order status</Badge>
-        <p className="text-2xl font-semibold capitalize text-[rgb(var(--text-primary))]">{status}</p>
+        <p className="text-2xl font-semibold capitalize text-[rgb(var(--text-primary))]">{formatStatusLabel(status)}</p>
       </div>
       <div className="flex flex-wrap gap-3">
         {nextStatusLabels[status].map((label) => (
@@ -30,7 +41,7 @@ export function OrderStatusPanel({ orderId, status }: OrderStatusPanelProps) {
             <input name="orderId" type="hidden" value={orderId} />
             <input name="status" type="hidden" value={label} />
             <Button size="sm" type="submit" variant={label === "cancelled" ? "danger" : "secondary"}>
-              Mark as {label}
+              Mark as {formatStatusLabel(label)}
             </Button>
           </form>
         ))}

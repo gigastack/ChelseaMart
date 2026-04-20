@@ -1,47 +1,60 @@
-import { quoteOrderTotals } from "@/lib/pricing/calculate";
-import type { CheckoutRoute } from "@/lib/domain/types";
-import type { CartItemRecord } from "@/lib/orders/repository";
+type CartItemInput = {
+  productId: string;
+  quantity: number;
+  sellPriceNgn: number;
+  title: string;
+};
 
-type CreateOrderInput = {
-  cartItems: CartItemRecord[];
+type RouteSnapshot = {
+  destinationLabel: string;
+  etaDaysMax: number;
+  etaDaysMin: number;
+  formulaLabel: string;
+  mode: "air" | "sea";
+  originLabel: string;
+  routeId: string;
+  routeVersionId: string;
+  termsSummary: string;
+};
+
+type CreateRouteAcceptedOrderInput = {
+  cartItems: CartItemInput[];
   consigneeId: string;
-  route: CheckoutRoute;
-  routeConfig: {
-    minimumFeeNgn: number;
-    pricePerKgUsd: number;
-  };
-  usdToNgnRate: number;
+  routeSnapshot: RouteSnapshot;
+  serviceFeeNgn: number;
   userId: string;
 };
 
-export function createOrder(input: CreateOrderInput) {
-  const summary = quoteOrderTotals({
-    items: input.cartItems.map((item) => ({
-      productTitle: item.title,
-      quantity: item.quantity,
-      sellPriceNgn: item.sellPriceNgn,
-      weightKg: item.weightKg,
-    })),
-    routeConfig: input.routeConfig,
-    usdToNgnRate: input.usdToNgnRate,
-  });
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+export function createRouteAcceptedOrder(input: CreateRouteAcceptedOrderInput) {
+  const items = input.cartItems.map((item) => ({
+    lineTotalNgnSnapshot: roundMoney(item.sellPriceNgn * item.quantity),
+    moqSnapshot: 1,
+    productId: item.productId,
+    productTitleSnapshot: item.title,
+    productUnitPriceNgnSnapshot: item.sellPriceNgn,
+    quantity: item.quantity,
+  }));
+
+  const productSubtotalNgn = roundMoney(items.reduce((sum, item) => sum + item.lineTotalNgnSnapshot, 0));
+  const productPaymentTotalNgn = roundMoney(productSubtotalNgn + input.serviceFeeNgn);
 
   return {
     consigneeId: input.consigneeId,
-    currency: "NGN" as const,
-    grandTotalNgn: summary.grandTotalNgn,
-    items: input.cartItems.map((item, index) => ({
-      lineTotalNgnSnapshot: summary.lines[index]?.productSubtotalNgn ?? 0,
-      logisticsFeeNgnSnapshot: summary.lines[index]?.logisticsFeeNgn ?? 0,
-      moqSnapshot: 1,
-      productTitleSnapshot: item.title,
-      productUnitPriceNgnSnapshot: item.sellPriceNgn,
-      quantity: item.quantity,
-      weightKgSnapshot: item.weightKg,
-    })),
-    logisticsTotalNgn: summary.logisticsTotalNgn,
-    productSubtotalNgn: summary.productSubtotalNgn,
-    route: input.route,
+    items,
+    productPaymentState: "pending" as const,
+    productPaymentTotalNgn,
+    productSubtotalNgn,
+    routeAccepted: true,
+    routeAcceptedAt: new Date().toISOString(),
+    routeSnapshot: input.routeSnapshot,
+    serviceFeeNgn: input.serviceFeeNgn,
+    shippingCostNgn: null,
+    shippingPaymentState: "not_due" as const,
+    status: "route_selected" as const,
     userId: input.userId,
   };
 }

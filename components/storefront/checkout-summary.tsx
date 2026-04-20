@@ -3,9 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 type CheckoutSummaryProps = {
   summary: {
     currency: "NGN";
-    grandTotalNgn: number;
-    itemsSubtotalNgn: number;
-    logisticsTotalNgn: number;
+    payNowTotalNgn: number;
+    productSubtotalNgn: number;
+    serviceFeeNgn: number;
   };
 };
 
@@ -18,21 +18,25 @@ export function CheckoutSummary({ summary }: CheckoutSummaryProps) {
     <Card>
       <CardHeader>
         <CardDescription>Checkout summary</CardDescription>
-        <CardTitle>Payment stays in {summary.currency}</CardTitle>
+        <CardTitle>Pay now in {summary.currency}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between text-sm text-[rgb(var(--text-secondary))]">
           <span>Product subtotal</span>
-          <span>{formatNgn(summary.itemsSubtotalNgn)}</span>
+          <span>{formatNgn(summary.productSubtotalNgn)}</span>
         </div>
         <div className="flex items-center justify-between text-sm text-[rgb(var(--text-secondary))]">
-          <span>Logistics total</span>
-          <span>{formatNgn(summary.logisticsTotalNgn)}</span>
+          <span>Marketplace service fee</span>
+          <span>{formatNgn(summary.serviceFeeNgn)}</span>
         </div>
         <div className="flex items-center justify-between border-t border-[rgb(var(--border-subtle))] pt-4 text-base font-semibold text-[rgb(var(--text-primary))]">
-          <span>Grand total</span>
-          <span>{formatNgn(summary.grandTotalNgn)}</span>
+          <span>Product payment due now</span>
+          <span>{formatNgn(summary.payNowTotalNgn)}</span>
         </div>
+        <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
+          Shipping is billed separately after warehouse measurement and proof upload. No logistics charge is collected
+          in this first payment.
+        </p>
       </CardContent>
     </Card>
   );

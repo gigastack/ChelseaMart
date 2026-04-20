@@ -2,7 +2,7 @@
 
 ## Summary
 
-This product is a `Next.js` commerce platform for curated China-sourced products aimed at Nigerians globally, with `Nigeria hubs only` in `v1`. Customers browse a local catalog, can view prices in `NGN` or `USD`, and always pay in `NGN`. The admin controls imports, catalog lifecycle, pricing, logistics inputs, BI, and order statuses. `ELIM` is used only by admin flows, and the storefront never depends on live ELIM reads.
+This product is a `Next.js` commerce platform for curated China-sourced products aimed at Nigerians globally. Customers browse a local catalog, can view prices in `NGN` or `USD`, and always pay in `NGN`. The admin controls imports, catalog lifecycle, route management, warehouse operations, split payments, BI, and order statuses. `ELIM` is used only by admin flows, and the storefront never depends on live ELIM reads.
 
 ## Goals And Locked Scope
 
@@ -12,14 +12,14 @@ This product is a `Next.js` commerce platform for curated China-sourced products
 - Support `Manual Upload` and `Fetch from API` as equal product creation paths.
 - Support `100+ URL` batch imports asynchronously.
 - Treat `USD` as display-only. Checkout and payment remain `NGN`.
-- Introduce logistics pricing only at checkout, using order-level route selection and line-level logistics calculation.
+- Use a two-phase logistics model: product payment first, then shipping payment after warehouse measurement and proof upload.
 - Keep secrets env-only for ELIM and Paystack.
 
 Deferred to `v2`:
 - Customer-facing live ELIM search.
 - Multi-admin roles and permissions.
 - Additional payment gateways.
-- Whole-world destination support.
+- Additional destination and lane expansion beyond the admin-managed route table.
 - Last-mile delivery management.
 
 ## Architecture And Core Data Flow
@@ -49,10 +49,11 @@ Catalog health:
 - `USD` is display-only for storefront browsing.
 - Checkout currency is always `NGN`.
 - Product and listing pages show product price only.
-- Logistics is added only during checkout.
-- Customer chooses `Air` or `Sea` at checkout.
-- Logistics is calculated per line item, then summed into the order total.
-- Product `weight` is mandatory because route pricing depends on it.
+- Product pages show product price only, while checkout captures route acceptance and terms.
+- Customer chooses an admin-managed shipping route and accepts its formula, ETA, and terms before product payment.
+- Product payment and shipping payment are separate flows and separate ledgers.
+- Final shipping is calculated only after warehouse measurement using the accepted route version.
+- Product `weight` and `volume` are warehouse and pricing inputs, because air uses KG and sea uses CBM.
 - `MOQ` is admin-configurable and enforced in cart and checkout.
 
 ### Buyer And Consignee Model
@@ -115,7 +116,7 @@ Visual split:
 
 - Gallery-led layout with sticky purchase panel on desktop.
 - Purchase panel includes title, summary, price, MOQ, variants, quantity, and add-to-cart.
-- A visible note explains that logistics is added at checkout after route selection.
+- A visible route module explains that the customer pays for products first and pays shipping later after warehouse proof is uploaded.
 - Customer content should be polished local content, not raw supplier noise.
 
 ### Cart, Checkout, Dashboard
@@ -198,7 +199,8 @@ This keeps Codex-compatible rules in the file placement Codex can actually load,
 - Batch import handles `100+ URLs` asynchronously with dedupe and progress visibility.
 - Product publish is blocked if weight or required route config is missing.
 - Checkout always pays in `NGN`, even when storefront display mode is `USD`.
-- Checkout route choice is `Air` or `Sea` and totals update immediately.
+- Checkout captures route acceptance and charges product totals only.
+- Shipping payment becomes available only after warehouse measurement and proof upload.
 - Unavailable-source products are auto-hidden from storefront and listed in the dedicated review tab.
 - BI supports date filters, drilldowns, and exports.
 - Secrets are env-only and never editable in UI.
@@ -207,6 +209,6 @@ This keeps Codex-compatible rules in the file placement Codex can actually load,
 ## Assumptions
 
 - `Paystack` remains the only live `v1` payment gateway.
-- `Nigeria hubs only` remains the only delivery destination model in `v1`.
+- Route geography is admin-managed rather than hardcoded into the repository rules.
 - Availability scans are admin-triggered, even if scheduled refresh exists for other import jobs.
 - The repo will use root and nested `AGENTS.md` files as the Codex-visible rule system as real source directories are created.

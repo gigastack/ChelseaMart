@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 type PaymentPendingPageProps = {
   searchParams: Promise<{
+    kind?: string | string[];
     reference?: string | string[];
     trxref?: string | string[];
   }>;
@@ -19,6 +20,7 @@ function readParam(value?: string | string[]) {
 
 export default async function PaymentPendingPage({ searchParams }: PaymentPendingPageProps) {
   const params = await searchParams;
+  const kind = readParam(params.kind) === "shipping" ? "shipping" : "product";
   const reference = readParam(params.reference) ?? readParam(params.trxref);
 
   if (reference) {
@@ -36,11 +38,11 @@ export default async function PaymentPendingPage({ searchParams }: PaymentPendin
       });
 
       if (result.state === "paid") {
-        redirect(`/payment/success?reference=${encodeURIComponent(reference)}`);
+        redirect(`/payment/success?kind=${encodeURIComponent(kind)}&reference=${encodeURIComponent(reference)}`);
       }
 
       if (result.state === "failed") {
-        redirect(`/payment/failed?reference=${encodeURIComponent(reference)}`);
+        redirect(`/payment/failed?kind=${encodeURIComponent(kind)}&reference=${encodeURIComponent(reference)}`);
       }
     } catch {
       // Keep the pending surface if verification is not ready yet.
@@ -52,7 +54,11 @@ export default async function PaymentPendingPage({ searchParams }: PaymentPendin
       <section className="mx-auto max-w-3xl space-y-6 px-6 py-16 text-center">
         <Badge>Payment pending</Badge>
         <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Verification in progress</h1>
-        <p className="text-base leading-7 text-[rgb(var(--text-secondary))]">If Paystack has not completed verification yet, keep checking your order page instead of retrying multiple payments.</p>
+        <p className="text-base leading-7 text-[rgb(var(--text-secondary))]">
+          {kind === "shipping"
+            ? "If Paystack has not completed shipping-payment verification yet, keep checking your order page instead of retrying the invoice."
+            : "If Paystack has not completed product-payment verification yet, keep checking your order page instead of retrying checkout."}
+        </p>
         <Link className={cn(buttonVariants({ variant: "secondary" }))} href="/account/orders">
           Check order status
         </Link>

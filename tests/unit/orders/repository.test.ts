@@ -59,35 +59,41 @@ function createAdminOrdersClient() {
       return {
         select() {
           return {
-            order: vi.fn().mockResolvedValue({
-              data: [
-                {
-                  consignee_id: "consignee-1",
-                  created_at: "2026-04-17T09:00:00.000Z",
-                  grand_total_ngn: 123360,
-                  id: "order-1",
-                  logistics_total_ngn: 31360,
-                  order_items: [
+            order() {
+              return {
+                eq: vi.fn().mockResolvedValue({
+                  data: [
                     {
-                      cover_image_url: "/ProductImage.jpg",
-                      id: "item-1",
-                      product_id: "prod-1",
-                      product_title_snapshot: "Product Image Sample",
-                      product_unit_price_ngn_snapshot: 92000,
-                      quantity: 1,
-                      slug: "manual-product-image-item",
-                      weight_kg_snapshot: 1.4,
+                      consignee_id: "consignee-1",
+                      created_at: "2026-04-17T09:00:00.000Z",
+                      grand_total_ngn: 123360,
+                      id: "order-1",
+                      logistics_total_ngn: 31360,
+                      order_items: [
+                        {
+                          cover_image_url: "/ProductImage.jpg",
+                          id: "item-1",
+                          product_id: "prod-1",
+                          product_title_snapshot: "Product Image Sample",
+                          product_unit_price_ngn_snapshot: 92000,
+                          quantity: 1,
+                          slug: "manual-product-image-item",
+                          weight_kg_snapshot: 1.4,
+                        },
+                      ],
+                      payment_reference: "demo-paystack-ref-1001",
+                      payment_status: "paid",
+                      product_payment_state: "paid",
+                      shipping_payment_state: "pending",
+                      product_subtotal_ngn: 92000,
+                      route: "air",
+                      status: "awaiting_shipping_payment",
                     },
                   ],
-                  payment_reference: "demo-paystack-ref-1001",
-                  payment_status: "paid",
-                  product_subtotal_ngn: 92000,
-                  route: "air",
-                  status: "processing",
-                },
-              ],
-              error: null,
-            }),
+                  error: null,
+                }),
+              };
+            },
           };
         },
       };
@@ -151,7 +157,7 @@ describe("orders repository", () => {
     await expect(findAdminOrderById("order-1")).resolves.toMatchObject({
       id: "order-1",
       paymentStatus: "paid",
-      status: "processing",
+      status: "awaiting_shipping_payment",
     });
   });
 
@@ -162,17 +168,17 @@ describe("orders repository", () => {
     const { updateOrderStatus } = await import("@/lib/orders/repository");
 
     await updateOrderStatus({
-      note: "Admin marked the order as shipped.",
+      note: "Admin marked the order as in_transit.",
       orderId: "order-1",
-      status: "shipped",
+      status: "in_transit",
     });
 
     expect(client.orderUpdate).toHaveBeenCalledWith("id", "order-1");
     expect(client.eventInsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        note: "Admin marked the order as shipped.",
+        note: "Admin marked the order as in_transit.",
         order_id: "order-1",
-        status: "shipped",
+        status: "in_transit",
       }),
     );
   });

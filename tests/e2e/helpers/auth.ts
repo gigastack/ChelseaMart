@@ -8,7 +8,8 @@ const defaultCredentials = {
 };
 
 export const seededOrderIds = {
-  processing: "77777777-7777-7777-7777-777777777771",
+  awaitingShippingPayment: "77777777-7777-7777-7777-777777777771",
+  shippingPaid: "77777777-7777-7777-7777-777777777772",
 };
 
 async function submitCredentials(page: Page) {

@@ -1,9 +1,18 @@
 import { getPublicEnv } from "@/lib/config/env";
-import type { CheckoutRoute, OrderStatus } from "@/lib/domain/types";
-import { quoteOrderTotals } from "@/lib/pricing/calculate";
-import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import type {
+  MeasurementBasis,
+  OrderStatus,
+  ProductPaymentStatus,
+  RouteAcceptanceSnapshot,
+  ShipmentQuoteSnapshot,
+  ShippingMode,
+  ShippingPaymentStatus,
+} from "@/lib/domain/types";
+import { buildRouteAcceptanceSnapshot, calculateShippingChargeNgn } from "@/lib/logistics/two-phase";
+import { createRouteAcceptedOrder } from "@/lib/orders/create-order";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
-const USD_TO_NGN_RATE = 1_600;
+const DEFAULT_SERVICE_FEE_NGN = 0;
 
 export type CartItemRecord = {
   id: string;
@@ -14,7 +23,8 @@ export type CartItemRecord = {
   sellPriceNgn: number;
   slug: string;
   title: string;
-  weightKg: number;
+  volumeCbm: number | null;
+  weightKg: number | null;
 };
 
 export type ConsigneeRecord = {
@@ -26,6 +36,39 @@ export type ConsigneeRecord = {
   phone: string;
 };
 
+export type ShippingRouteRecord = {
+  destinationLabel: string;
+  etaDaysMax: number;
+  etaDaysMin: number;
+  formulaKind: "per_cbm" | "per_kg";
+  formulaLabel: string;
+  id: string;
+  mode: ShippingMode;
+  originLabel: string;
+  pricePerCbm: number | null;
+  pricePerKg: number | null;
+  rateCurrency: "NGN" | "USD";
+  termsSummary: string;
+  title: string;
+  usdToNgnRate: number | null;
+  versionId: string;
+  versionLabel: string;
+};
+
+export type ShipmentRecord = {
+  customerNotifiedAt: string | null;
+  id: string;
+  measuredAt: string | null;
+  measuredByProfileId: string | null;
+  measuredVolumeCbm: number | null;
+  measuredWeightKg: number | null;
+  measurementBasis: MeasurementBasis | null;
+  shippingCostNgn: number | null;
+  shippingQuoteSnapshot: ShipmentQuoteSnapshot | null;
+  weighingProofMimeType: string | null;
+  weighingProofPath: string | null;
+};
+
 export type OrderRecord = {
   consigneeId: string;
   createdLabel: string;
@@ -34,26 +77,37 @@ export type OrderRecord = {
   items: CartItemRecord[];
   logisticsTotalNgn: number;
   paymentReference: string | null;
-  paymentStatus: "failed" | "paid" | "pending";
+  paymentStatus: ProductPaymentStatus;
+  productPaymentReference: string | null;
+  productPaymentState: ProductPaymentStatus;
+  productPaymentTotalNgn: number;
   productSubtotalNgn: number;
-  route: CheckoutRoute;
+  route: ShippingMode | null;
+  routeSnapshot: RouteAcceptanceSnapshot | null;
+  serviceFeeNgn: number;
+  shipment: ShipmentRecord | null;
+  shippingCostNgn: number | null;
+  shippingPaymentReference: string | null;
+  shippingPaymentState: ShippingPaymentStatus;
   status: OrderStatus;
 };
 
-type CreateOrderInput = {
+type RouteAcceptedOrderInput = {
   cartItems: CartItemRecord[];
   consigneeId: string;
-  route: CheckoutRoute;
+  shippingRouteId: string;
   userId: string;
 };
 
-type OrderSummaryRecord = {
-  grandTotalNgn: number;
-  logisticsTotalNgn: number;
-  productSubtotalNgn: number;
+type ProductPaymentLookup = {
+  orderId: string;
+  paymentId: string;
 };
 
-type RouteConfigRecord = Record<CheckoutRoute, { minimumFeeNgn: number; pricePerKgUsd: number }>;
+type ShippingPaymentLookup = {
+  orderId: string;
+  paymentId: string;
+};
 
 function formatCreatedLabel(dateIso: string) {
   const date = new Date(dateIso);
@@ -76,6 +130,26 @@ function formatNaira(value: number) {
   }).format(value);
 }
 
+function asNumber(value: unknown) {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return Number(value);
+  }
+
+  return 0;
+}
+
+function asNullableNumber(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  return asNumber(value);
+}
+
 function mapConsigneeRow(consignee: Record<string, unknown>): ConsigneeRecord {
   return {
     cityOrState: String(consignee.city_or_state ?? ""),
@@ -90,109 +164,200 @@ function mapConsigneeRow(consignee: Record<string, unknown>): ConsigneeRecord {
 function mapOrderItemRow(item: Record<string, unknown>): CartItemRecord {
   return {
     id: String(item.id),
-    imageUrl: typeof item.cover_image_url === "string" ? item.cover_image_url : "/ProductImage.jpg",
-    priceDisplay: formatNaira(Number(item.product_unit_price_ngn_snapshot ?? item.sell_price_ngn ?? 0)),
+    imageUrl:
+      item.products && typeof item.products === "object" && "cover_image_url" in item.products
+        ? String(item.products.cover_image_url ?? "/ProductImage.jpg")
+        : "/ProductImage.jpg",
+    priceDisplay: formatNaira(asNumber(item.product_unit_price_ngn_snapshot ?? 0)),
     productId: String(item.product_id ?? item.id ?? "deleted-product"),
-    quantity: Number(item.quantity ?? 1),
-    sellPriceNgn: Number(item.product_unit_price_ngn_snapshot ?? item.sell_price_ngn ?? 0),
-    slug: typeof item.slug === "string" ? item.slug : "manual-product-image-item",
-    title: String(item.product_title_snapshot ?? item.title ?? "Product Image Sample"),
-    weightKg: Number(item.weight_kg_snapshot ?? item.weight_kg ?? 0),
+    quantity: asNumber(item.quantity ?? 1),
+    sellPriceNgn: asNumber(item.product_unit_price_ngn_snapshot ?? 0),
+    slug:
+      item.products && typeof item.products === "object" && "slug" in item.products
+        ? String(item.products.slug ?? "manual-product-image-item")
+        : "manual-product-image-item",
+    title: String(item.product_title_snapshot ?? "Product Image Sample"),
+    volumeCbm: asNullableNumber(item.volume_cbm_snapshot),
+    weightKg: asNullableNumber(item.weight_kg_snapshot),
+  };
+}
+
+function mapShipmentRow(shipment: Record<string, unknown> | null | undefined): ShipmentRecord | null {
+  if (!shipment) {
+    return null;
+  }
+
+  return {
+    customerNotifiedAt:
+      typeof shipment.customer_notified_at === "string" ? shipment.customer_notified_at : null,
+    id: String(shipment.id),
+    measuredAt: typeof shipment.measured_at === "string" ? shipment.measured_at : null,
+    measuredByProfileId:
+      typeof shipment.measured_by_profile_id === "string" ? shipment.measured_by_profile_id : null,
+    measuredVolumeCbm: asNullableNumber(shipment.measured_volume_cbm),
+    measuredWeightKg: asNullableNumber(shipment.measured_weight_kg),
+    measurementBasis:
+      shipment.measurement_basis === "weight_kg" || shipment.measurement_basis === "volume_cbm"
+        ? shipment.measurement_basis
+        : null,
+    shippingCostNgn: asNullableNumber(shipment.shipping_cost_ngn),
+    shippingQuoteSnapshot:
+      shipment.shipping_quote_snapshot && typeof shipment.shipping_quote_snapshot === "object"
+        ? (shipment.shipping_quote_snapshot as ShipmentQuoteSnapshot)
+        : null,
+    weighingProofMimeType:
+      typeof shipment.weighing_proof_mime_type === "string" ? shipment.weighing_proof_mime_type : null,
+    weighingProofPath:
+      typeof shipment.weighing_proof_path === "string" ? shipment.weighing_proof_path : null,
   };
 }
 
 function mapOrderRow(order: Record<string, unknown>): OrderRecord {
   const orderItems = Array.isArray(order.order_items) ? order.order_items : [];
+  const productPayments = Array.isArray(order.product_payments) ? order.product_payments : [];
+  const shippingPayments = Array.isArray(order.shipping_payments) ? order.shipping_payments : [];
+  const shipmentRows = Array.isArray(order.order_shipments) ? order.order_shipments : [];
+  const shipment = shipmentRows.length > 0 ? mapShipmentRow(shipmentRows[0] as Record<string, unknown>) : null;
+  const productPaymentReference =
+    productPayments[0] && typeof productPayments[0] === "object" && "payment_reference" in productPayments[0]
+      ? String(productPayments[0].payment_reference ?? "")
+      : null;
+  const shippingPaymentReference =
+    shippingPayments[0] && typeof shippingPayments[0] === "object" && "payment_reference" in shippingPayments[0]
+      ? String(shippingPayments[0].payment_reference ?? "")
+      : null;
 
   return {
     consigneeId: String(order.consignee_id),
     createdLabel: formatCreatedLabel(String(order.created_at)),
-    grandTotalNgn: Number(order.grand_total_ngn ?? 0),
+    grandTotalNgn: asNumber(order.grand_total_ngn ?? 0),
     id: String(order.id),
     items: orderItems.map((item) => mapOrderItemRow(item as Record<string, unknown>)),
-    logisticsTotalNgn: Number(order.logistics_total_ngn ?? 0),
-    paymentReference: typeof order.payment_reference === "string" ? order.payment_reference : null,
-    paymentStatus: (order.payment_status as OrderRecord["paymentStatus"] | undefined) ?? "pending",
-    productSubtotalNgn: Number(order.product_subtotal_ngn ?? 0),
-    route: order.route as CheckoutRoute,
-    status: order.status as OrderStatus,
+    logisticsTotalNgn: asNumber(order.logistics_total_ngn ?? 0),
+    paymentReference: productPaymentReference || null,
+    paymentStatus:
+      order.product_payment_state === "paid" || order.product_payment_state === "failed"
+        ? order.product_payment_state
+        : "pending",
+    productPaymentReference: productPaymentReference || null,
+    productPaymentState:
+      order.product_payment_state === "paid" || order.product_payment_state === "failed"
+        ? order.product_payment_state
+        : "pending",
+    productPaymentTotalNgn: asNumber(order.product_payment_total_ngn ?? order.product_subtotal_ngn ?? 0),
+    productSubtotalNgn: asNumber(order.product_subtotal_ngn ?? 0),
+    route: order.route === "air" || order.route === "sea" ? order.route : null,
+    routeSnapshot:
+      order.route_snapshot && typeof order.route_snapshot === "object"
+        ? (order.route_snapshot as RouteAcceptanceSnapshot)
+        : null,
+    serviceFeeNgn: asNumber(order.service_fee_ngn ?? 0),
+    shipment,
+    shippingCostNgn: asNullableNumber(order.shipping_cost_ngn),
+    shippingPaymentReference: shippingPaymentReference || null,
+    shippingPaymentState:
+      order.shipping_payment_state === "paid" ||
+      order.shipping_payment_state === "failed" ||
+      order.shipping_payment_state === "pending"
+        ? order.shipping_payment_state
+        : "not_due",
+    status: String(order.status ?? "cart") as OrderStatus,
   };
 }
 
-function buildOrderSummary(cartItems: CartItemRecord[], route: CheckoutRoute, routeConfigs: RouteConfigRecord): OrderSummaryRecord {
-  const totals = quoteOrderTotals({
-    items: cartItems.map((item) => ({
-      productTitle: item.title,
-      quantity: item.quantity,
-      sellPriceNgn: item.sellPriceNgn,
-      weightKg: item.weightKg,
-    })),
-    routeConfig: routeConfigs[route],
-    usdToNgnRate: USD_TO_NGN_RATE,
-  });
-
-  return {
-    grandTotalNgn: totals.grandTotalNgn,
-    logisticsTotalNgn: totals.logisticsTotalNgn,
-    productSubtotalNgn: totals.productSubtotalNgn,
-  };
-}
-
-function mapJoinedOrders(data: Array<Record<string, unknown>>) {
-  return data.map((order) => ({
-    ...order,
-    order_items: ((order.order_items as Array<Record<string, unknown>> | undefined) ?? []).map((item) => ({
-      ...item,
-      cover_image_url:
-        item.products && typeof item.products === "object" && "cover_image_url" in item.products
-          ? item.products.cover_image_url
-          : "/ProductImage.jpg",
-      slug:
-        item.products && typeof item.products === "object" && "slug" in item.products
-          ? item.products.slug
-          : "manual-product-image-item",
-    })),
-  }));
-}
-
-async function selectOrdersForUser(userId: string) {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
-      "id, consignee_id, route, status, grand_total_ngn, product_subtotal_ngn, logistics_total_ngn, payment_reference, payment_status, created_at, order_items(id, product_id, product_title_snapshot, quantity, product_unit_price_ngn_snapshot, weight_kg_snapshot, products(slug, cover_image_url))",
-    )
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return mapJoinedOrders((data ?? []) as Array<Record<string, unknown>>);
-}
-
-async function selectOrdersForAdmin() {
+async function selectOrders(where: { orderId?: string; userId?: string } = {}) {
   const supabase = createSupabaseServiceRoleClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("orders")
     .select(
-      "id, consignee_id, route, status, grand_total_ngn, product_subtotal_ngn, logistics_total_ngn, payment_reference, payment_status, created_at, order_items(id, product_id, product_title_snapshot, quantity, product_unit_price_ngn_snapshot, weight_kg_snapshot, products(slug, cover_image_url))",
+      "id, consignee_id, route, shipping_route_id, shipping_route_version_id, route_accepted, route_accepted_at, route_snapshot, status, currency, product_subtotal_ngn, service_fee_ngn, product_payment_total_ngn, logistics_total_ngn, shipping_cost_ngn, grand_total_ngn, payment_reference, product_payment_state, shipping_payment_state, created_at, order_items(id, product_id, product_title_snapshot, quantity, moq_snapshot, weight_kg_snapshot, volume_cbm_snapshot, product_unit_price_ngn_snapshot, logistics_fee_ngn_snapshot, line_total_ngn_snapshot, products(slug, cover_image_url)), order_shipments(id, measurement_basis, measured_weight_kg, measured_volume_cbm, measured_at, measured_by_profile_id, weighing_proof_path, weighing_proof_mime_type, shipping_quote_snapshot, shipping_cost_ngn, customer_notified_at), product_payments(id, payment_reference, status, amount_ngn, paid_at), shipping_payments(id, payment_reference, status, amount_ngn, paid_at)",
     )
     .order("created_at", { ascending: false });
+
+  if (where.userId) {
+    query = query.eq("user_id", where.userId);
+  }
+
+  if (where.orderId) {
+    query = query.eq("id", where.orderId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
   }
 
-  return mapJoinedOrders((data ?? []) as Array<Record<string, unknown>>);
+  return (data ?? []) as Array<Record<string, unknown>>;
+}
+
+async function getShippingRoutesWithVersions() {
+  const supabase = createSupabaseServiceRoleClient();
+  const [{ data: routes, error: routeError }, { data: versions, error: versionError }] = await Promise.all([
+    supabase
+      .from("shipping_routes")
+      .select("id, title, origin_label, destination_label, mode, formula_label, eta_days_min, eta_days_max, terms_summary, active")
+      .eq("active", true)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("shipping_route_versions")
+      .select("id, route_id, version_label, formula_kind, formula_label, rate_currency, price_per_kg, price_per_cbm, usd_to_ngn_rate, active")
+      .eq("active", true)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (routeError) {
+    throw routeError;
+  }
+
+  if (versionError) {
+    throw versionError;
+  }
+
+  const versionsByRoute = new Map<string, Record<string, unknown>>();
+
+  for (const version of versions ?? []) {
+    const routeId = String(version.route_id);
+    if (!versionsByRoute.has(routeId)) {
+      versionsByRoute.set(routeId, version as Record<string, unknown>);
+    }
+  }
+
+  return (routes ?? [])
+    .map((route) => {
+      const version = versionsByRoute.get(String(route.id));
+
+      if (!version) {
+        return null;
+      }
+
+      return {
+        destinationLabel: String(route.destination_label),
+        etaDaysMax: asNumber(route.eta_days_max),
+        etaDaysMin: asNumber(route.eta_days_min),
+        formulaKind: String(version.formula_kind) as "per_cbm" | "per_kg",
+        formulaLabel: String(route.formula_label ?? version.formula_label),
+        id: String(route.id),
+        mode: String(route.mode) as ShippingMode,
+        originLabel: String(route.origin_label),
+        pricePerCbm: asNullableNumber(version.price_per_cbm),
+        pricePerKg: asNullableNumber(version.price_per_kg),
+        rateCurrency: (version.rate_currency === "USD" ? "USD" : "NGN") as "NGN" | "USD",
+        termsSummary: String(route.terms_summary),
+        title: String(route.title),
+        usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate),
+        versionId: String(version.id),
+        versionLabel: String(version.version_label),
+      } satisfies ShippingRouteRecord;
+    })
+    .filter((route): route is ShippingRouteRecord => Boolean(route));
 }
 
 export async function listCheckoutCartItems() {
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, slug, title, sell_price_ngn, weight_kg, cover_image_url")
+    .select("id, slug, title, sell_price_ngn, weight_kg, volume_cbm, cover_image_url")
     .eq("status", "live")
     .order("featured", { ascending: false })
     .limit(1);
@@ -204,43 +369,23 @@ export async function listCheckoutCartItems() {
   return (data ?? []).map((product) => ({
     id: `cart-${product.id}`,
     imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
-    priceDisplay: formatNaira(Number(product.sell_price_ngn ?? 0)),
+    priceDisplay: formatNaira(asNumber(product.sell_price_ngn ?? 0)),
     productId: product.id,
     quantity: 1,
-    sellPriceNgn: Number(product.sell_price_ngn ?? 0),
+    sellPriceNgn: asNumber(product.sell_price_ngn ?? 0),
     slug: product.slug,
     title: product.title,
-    weightKg: Number(product.weight_kg ?? 0),
+    volumeCbm: asNullableNumber(product.volume_cbm),
+    weightKg: asNullableNumber(product.weight_kg),
   }));
 }
 
+export async function listCheckoutShippingRoutes() {
+  return getShippingRoutesWithVersions();
+}
+
 export async function listRouteConfigs() {
-  const supabase = createSupabaseServiceRoleClient();
-  const { data, error } = await supabase
-    .from("shipping_configs")
-    .select("route, minimum_fee_ngn, price_per_kg_usd")
-    .eq("active", true);
-
-  if (error) {
-    throw error;
-  }
-
-  const configs = (data ?? []).reduce<RouteConfigRecord>((allConfigs, config) => {
-    const route = config.route as CheckoutRoute;
-
-    allConfigs[route] = {
-      minimumFeeNgn: Number(config.minimum_fee_ngn ?? 0),
-      pricePerKgUsd: Number(config.price_per_kg_usd ?? 0),
-    };
-
-    return allConfigs;
-  }, {} as RouteConfigRecord);
-
-  if (!configs.air || !configs.sea) {
-    throw new Error("Shipping route configuration is incomplete. Configure both Air and Sea routes in shipping settings.");
-  }
-
-  return configs;
+  return getShippingRoutesWithVersions();
 }
 
 export async function listConsignees(userId?: string | null) {
@@ -248,7 +393,7 @@ export async function listConsignees(userId?: string | null) {
     return [];
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from("consignees")
     .select("id, full_name, phone, city_or_state, notes, is_default")
@@ -267,12 +412,17 @@ export async function listOrders(userId?: string | null) {
     return [];
   }
 
-  const data = await selectOrdersForUser(userId);
-  return data.map((order) => mapOrderRow(order as Record<string, unknown>));
+  const data = await selectOrders({ userId });
+  return data.map((order) => mapOrderRow(order));
 }
 
 export async function findOrderById(orderId: string, userId?: string | null) {
-  return (await listOrders(userId)).find((order) => order.id === orderId) ?? null;
+  if (!userId) {
+    return null;
+  }
+
+  const data = await selectOrders({ orderId, userId });
+  return data[0] ? mapOrderRow(data[0]) : null;
 }
 
 export async function findConsigneeById(consigneeId: string, userId?: string | null) {
@@ -280,12 +430,13 @@ export async function findConsigneeById(consigneeId: string, userId?: string | n
 }
 
 export async function listAdminOrders() {
-  const data = await selectOrdersForAdmin();
-  return data.map((order) => mapOrderRow(order as Record<string, unknown>));
+  const data = await selectOrders();
+  return data.map((order) => mapOrderRow(order));
 }
 
 export async function findAdminOrderById(orderId: string) {
-  return (await listAdminOrders()).find((order) => order.id === orderId) ?? null;
+  const data = await selectOrders({ orderId });
+  return data[0] ? mapOrderRow(data[0]) : null;
 }
 
 export async function findAdminConsigneeById(consigneeId: string) {
@@ -339,24 +490,60 @@ export async function createConsigneeForUser(
   return mapConsigneeRow(data as Record<string, unknown>);
 }
 
-export async function createPendingOrder(input: CreateOrderInput) {
-  const routeConfigs = await listRouteConfigs();
-  const totals = buildOrderSummary(input.cartItems, input.route, routeConfigs);
-  const supabase = createSupabaseServiceRoleClient();
-  const publicEnv = getPublicEnv();
+export async function createRouteAcceptedOrderRecord(input: RouteAcceptedOrderInput) {
+  const route = (await listCheckoutShippingRoutes()).find((candidate) => candidate.id === input.shippingRouteId);
 
+  if (!route) {
+    throw new Error("Choose a valid shipping route before product payment.");
+  }
+
+  const routeSnapshot = buildRouteAcceptanceSnapshot({
+    destinationLabel: route.destinationLabel,
+    etaDaysMax: route.etaDaysMax,
+    etaDaysMin: route.etaDaysMin,
+    formulaLabel: route.formulaLabel,
+    mode: route.mode,
+    originLabel: route.originLabel,
+    routeId: route.id,
+    routeVersionId: route.versionId,
+    termsSummary: route.termsSummary,
+  });
+
+  const orderDraft = createRouteAcceptedOrder({
+    cartItems: input.cartItems.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      sellPriceNgn: item.sellPriceNgn,
+      title: item.title,
+    })),
+    consigneeId: input.consigneeId,
+    routeSnapshot,
+    serviceFeeNgn: DEFAULT_SERVICE_FEE_NGN,
+    userId: input.userId,
+  });
+
+  const supabase = createSupabaseServiceRoleClient();
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
-      consignee_id: input.consigneeId,
+      consignee_id: orderDraft.consigneeId,
       currency: "NGN",
-      grand_total_ngn: totals.grandTotalNgn,
-      logistics_total_ngn: totals.logisticsTotalNgn,
+      grand_total_ngn: orderDraft.productPaymentTotalNgn,
+      logistics_total_ngn: 0,
       payment_reference: null,
       payment_status: "pending",
-      product_subtotal_ngn: totals.productSubtotalNgn,
-      route: input.route,
-      status: "pending",
+      product_payment_state: "pending",
+      product_payment_total_ngn: orderDraft.productPaymentTotalNgn,
+      product_subtotal_ngn: orderDraft.productSubtotalNgn,
+      route: route.mode,
+      route_accepted: true,
+      route_accepted_at: orderDraft.routeAcceptedAt,
+      route_snapshot: routeSnapshot,
+      service_fee_ngn: orderDraft.serviceFeeNgn,
+      shipping_payment_state: "not_due",
+      shipping_route_id: route.id,
+      shipping_route_version_id: route.versionId,
+      status: "route_selected",
       user_id: input.userId,
     })
     .select("id")
@@ -366,70 +553,293 @@ export async function createPendingOrder(input: CreateOrderInput) {
     throw orderError;
   }
 
-  const orderId = String(orderData?.id);
-  const lineTotals = quoteOrderTotals({
-    items: input.cartItems.map((item) => ({
-      productTitle: item.title,
-      quantity: item.quantity,
-      sellPriceNgn: item.sellPriceNgn,
-      weightKg: item.weightKg,
-    })),
-    routeConfig: routeConfigs[input.route],
-    usdToNgnRate: USD_TO_NGN_RATE,
-  });
-
-  const { error: itemError } = await supabase.from("order_items").insert(
-    input.cartItems.map((item, index) => ({
-      line_total_ngn_snapshot: item.sellPriceNgn * item.quantity + lineTotals.lines[index].logisticsFeeNgn,
-      logistics_fee_ngn_snapshot: lineTotals.lines[index].logisticsFeeNgn,
+  const orderId = String(orderData.id);
+  const { error: itemsError } = await supabase.from("order_items").insert(
+    input.cartItems.map((item) => ({
+      line_total_ngn_snapshot: item.sellPriceNgn * item.quantity,
+      logistics_fee_ngn_snapshot: 0,
       moq_snapshot: 1,
       order_id: orderId,
       product_id: item.productId,
       product_title_snapshot: item.title,
       product_unit_price_ngn_snapshot: item.sellPriceNgn,
       quantity: item.quantity,
+      volume_cbm_snapshot: item.volumeCbm,
       weight_kg_snapshot: item.weightKg,
     })),
   );
 
-  if (itemError) {
-    throw itemError;
+  if (itemsError) {
+    throw itemsError;
+  }
+
+  const { data: paymentData, error: paymentError } = await supabase
+    .from("product_payments")
+    .insert({
+      amount_ngn: orderDraft.productPaymentTotalNgn,
+      order_id: orderId,
+      provider: "paystack",
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (paymentError) {
+    throw paymentError;
   }
 
   await supabase.from("order_status_events").insert({
-    note: "Checkout created and awaiting Paystack payment completion.",
+    note: "Customer accepted shipping route terms and is ready for product payment.",
     order_id: orderId,
-    status: "pending",
+    status: "route_selected",
   });
 
+  const publicEnv = getPublicEnv();
+
   return {
-    callbackUrl: publicEnv.siteUrl ? new URL("/payment/pending", publicEnv.siteUrl).toString() : "/payment/pending",
+    callbackUrl: publicEnv.siteUrl ? new URL("/payment/pending?kind=product", publicEnv.siteUrl).toString() : "/payment/pending?kind=product",
     orderId,
-    totals,
+    paymentId: String(paymentData.id),
+    routeSnapshot,
+    totals: {
+      productPaymentTotalNgn: orderDraft.productPaymentTotalNgn,
+      productSubtotalNgn: orderDraft.productSubtotalNgn,
+      serviceFeeNgn: orderDraft.serviceFeeNgn,
+    },
   };
 }
 
-export async function attachPaystackReference(orderId: string, input: { authorizationUrl?: string | null; paymentReference: string }) {
+export async function attachProductPaymentReference(
+  orderId: string,
+  paymentId: string,
+  input: { authorizationUrl?: string | null; paymentReference: string },
+) {
   const supabase = createSupabaseServiceRoleClient();
-  const { error } = await supabase
+  await supabase
     .from("orders")
     .update({
-      paystack_authorization_url: input.authorizationUrl ?? null,
       payment_reference: input.paymentReference,
+      paystack_authorization_url: input.authorizationUrl ?? null,
     })
     .eq("id", orderId);
+
+  const { error } = await supabase
+    .from("product_payments")
+    .update({
+      payment_reference: input.paymentReference,
+    })
+    .eq("id", paymentId);
 
   if (error) {
     throw error;
   }
 }
 
-export async function findOrderByPaymentReference(reference: string) {
+export async function attachShippingPaymentReference(
+  orderId: string,
+  paymentId: string,
+  input: { paymentReference: string },
+) {
+  const supabase = createSupabaseServiceRoleClient();
+  const { error } = await supabase
+    .from("shipping_payments")
+    .update({
+      payment_reference: input.paymentReference,
+    })
+    .eq("id", paymentId)
+    .eq("order_id", orderId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function findOrderByProductPaymentReference(reference: string): Promise<ProductPaymentLookup | null> {
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
-    .from("orders")
-    .select("id, user_id")
+    .from("product_payments")
+    .select("id, order_id")
     .eq("payment_reference", reference)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? { orderId: String(data.order_id), paymentId: String(data.id) } : null;
+}
+
+export async function findOrderByShippingPaymentReference(reference: string): Promise<ShippingPaymentLookup | null> {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from("shipping_payments")
+    .select("id, order_id")
+    .eq("payment_reference", reference)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? { orderId: String(data.order_id), paymentId: String(data.id) } : null;
+}
+
+export async function findOrderByPaymentReference(reference: string) {
+  return findOrderByProductPaymentReference(reference);
+}
+
+export async function updateProductPaymentState(input: {
+  note: string;
+  orderId: string;
+  paymentId: string;
+  paymentState: ProductPaymentStatus;
+  status: OrderStatus;
+}) {
+  const supabase = createSupabaseServiceRoleClient();
+  const paidAt = input.paymentState === "paid" ? new Date().toISOString() : null;
+
+  const { error: paymentError } = await supabase
+    .from("product_payments")
+    .update({
+      paid_at: paidAt,
+      status: input.paymentState,
+    })
+    .eq("id", input.paymentId);
+
+  if (paymentError) {
+    throw paymentError;
+  }
+
+  const { error: orderError } = await supabase
+    .from("orders")
+    .update({
+      payment_status: input.paymentState,
+      payment_verified_at: paidAt,
+      product_payment_state: input.paymentState,
+      status: input.status,
+    })
+    .eq("id", input.orderId);
+
+  if (orderError) {
+    throw orderError;
+  }
+
+  if (input.paymentState === "paid") {
+    await supabase.from("order_status_events").insert([
+      {
+        note: "Product payment completed successfully.",
+        order_id: input.orderId,
+        status: "paid_for_products",
+      },
+      {
+        note: "Order entered the warehouse queue.",
+        order_id: input.orderId,
+        status: input.status,
+      },
+    ]);
+    return;
+  }
+
+  await supabase.from("order_status_events").insert({
+    note: input.note,
+    order_id: input.orderId,
+    status: input.status,
+  });
+}
+
+export async function updateOrderPaymentState(input: {
+  note: string;
+  orderId: string;
+  paymentStatus: ProductPaymentStatus;
+  status: OrderStatus;
+}) {
+  const payment = await findOrderByProductPaymentReference(`order-${input.orderId}`);
+
+  await updateProductPaymentState({
+    note: input.note,
+    orderId: input.orderId,
+    paymentId: payment?.paymentId ?? input.orderId,
+    paymentState: input.paymentStatus,
+    status: input.status,
+  });
+}
+
+export async function updateShippingPaymentState(input: {
+  note: string;
+  orderId: string;
+  paymentId: string;
+  paymentState: Exclude<ShippingPaymentStatus, "not_due">;
+  status: OrderStatus;
+}) {
+  const supabase = createSupabaseServiceRoleClient();
+  const paidAt = input.paymentState === "paid" ? new Date().toISOString() : null;
+
+  const { error: paymentError } = await supabase
+    .from("shipping_payments")
+    .update({
+      paid_at: paidAt,
+      status: input.paymentState === "pending" ? "pending" : input.paymentState,
+    })
+    .eq("id", input.paymentId);
+
+  if (paymentError) {
+    throw paymentError;
+  }
+
+  const { error: orderError } = await supabase
+    .from("orders")
+    .update({
+      shipping_payment_state: input.paymentState,
+      status: input.status,
+    })
+    .eq("id", input.orderId);
+
+  if (orderError) {
+    throw orderError;
+  }
+
+  if (input.paymentState === "paid") {
+    await supabase.from("order_status_events").insert([
+      {
+        note: "Shipping payment completed successfully.",
+        order_id: input.orderId,
+        status: "shipping_paid",
+      },
+      {
+        note: input.note,
+        order_id: input.orderId,
+        status: input.status,
+      },
+    ]);
+    return;
+  }
+
+  await supabase.from("order_status_events").insert({
+    note: input.note,
+    order_id: input.orderId,
+    status: input.status,
+  });
+}
+
+export async function findPendingShippingPaymentByOrderId(orderId: string, userId?: string | null) {
+  const order = userId ? await findOrderById(orderId, userId) : await findAdminOrderById(orderId);
+
+  if (
+    !order ||
+    order.shippingPaymentState === "not_due" ||
+    order.shippingPaymentState === "paid" ||
+    order.shippingCostNgn === null
+  ) {
+    return null;
+  }
+
+  const supabase = createSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from("shipping_payments")
+    .select("id, amount_ngn")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -438,39 +848,194 @@ export async function findOrderByPaymentReference(reference: string) {
 
   return data
     ? {
-        id: String(data.id),
-        userId: String(data.user_id),
+        amountNgn: asNumber(data.amount_ngn),
+        paymentId: String(data.id),
       }
     : null;
 }
 
-export async function updateOrderPaymentState(input: {
-  note: string;
-  orderId: string;
-  paymentStatus: OrderRecord["paymentStatus"];
-  status: OrderStatus;
-}) {
+export async function markOrderArrivedAtWarehouse(orderId: string) {
   const supabase = createSupabaseServiceRoleClient();
-  const now = new Date().toISOString();
-
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      payment_status: input.paymentStatus,
-      payment_verified_at: input.paymentStatus === "paid" ? now : null,
-      status: input.status,
-    })
-    .eq("id", input.orderId);
+  const { error } = await supabase.from("orders").update({ status: "arrived_at_warehouse" }).eq("id", orderId);
 
   if (error) {
     throw error;
   }
 
   await supabase.from("order_status_events").insert({
-    note: input.note,
-    order_id: input.orderId,
-    status: input.status,
+    note: "Warehouse confirmed order arrival.",
+    order_id: orderId,
+    status: "arrived_at_warehouse",
   });
+}
+
+export async function recordWarehouseMeasurement(input: {
+  measuredByProfileId: string;
+  measuredValue: number;
+  orderId: string;
+  proofMimeType: string;
+  proofPath: string;
+}) {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, route, shipping_route_version_id, product_payment_total_ngn")
+    .eq("id", input.orderId)
+    .single();
+
+  if (orderError) {
+    throw orderError;
+  }
+
+  const { data: version, error: versionError } = await supabase
+    .from("shipping_route_versions")
+    .select("formula_kind, price_per_kg, price_per_cbm, rate_currency, usd_to_ngn_rate")
+    .eq("id", order.shipping_route_version_id)
+    .single();
+
+  if (versionError) {
+    throw versionError;
+  }
+
+  const shippingCostNgn =
+    order.route === "sea"
+      ? calculateShippingChargeNgn({
+          measuredVolumeCbm: input.measuredValue,
+          mode: "sea",
+          pricePerCbm: asNumber(version.price_per_cbm ?? 0),
+          rateCurrency: version.rate_currency === "USD" ? "USD" : "NGN",
+          usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate) ?? undefined,
+        })
+      : calculateShippingChargeNgn({
+          measuredWeightKg: input.measuredValue,
+          mode: "air",
+          pricePerKg: asNumber(version.price_per_kg ?? 0),
+          rateCurrency: version.rate_currency === "USD" ? "USD" : "NGN",
+          usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate) ?? undefined,
+        });
+
+  const measurementBasis: MeasurementBasis = order.route === "sea" ? "volume_cbm" : "weight_kg";
+  const quoteSnapshot: ShipmentQuoteSnapshot = {
+    formulaKind: String(version.formula_kind) as "per_cbm" | "per_kg",
+    measurementBasis,
+    mode: String(order.route) as ShippingMode,
+    pricePerCbm: asNullableNumber(version.price_per_cbm),
+    pricePerKg: asNullableNumber(version.price_per_kg),
+    rateCurrency: version.rate_currency === "USD" ? "USD" : "NGN",
+    usdToNgnRate: asNullableNumber(version.usd_to_ngn_rate),
+  };
+
+  const { data: shipment, error: shipmentError } = await supabase
+    .from("order_shipments")
+    .upsert(
+      {
+        customer_notified_at: new Date().toISOString(),
+        measured_at: new Date().toISOString(),
+        measured_by_profile_id: input.measuredByProfileId,
+        measured_volume_cbm: measurementBasis === "volume_cbm" ? input.measuredValue : null,
+        measured_weight_kg: measurementBasis === "weight_kg" ? input.measuredValue : null,
+        measurement_basis: measurementBasis,
+        order_id: input.orderId,
+        shipping_cost_ngn: shippingCostNgn,
+        shipping_quote_snapshot: quoteSnapshot,
+        weighing_proof_mime_type: input.proofMimeType,
+        weighing_proof_path: input.proofPath,
+      },
+      { onConflict: "order_id" },
+    )
+    .select("id")
+    .single();
+
+  if (shipmentError) {
+    throw shipmentError;
+  }
+
+  const { data: existingShippingPayment, error: existingShippingPaymentError } = await supabase
+    .from("shipping_payments")
+    .select("id")
+    .eq("order_id", input.orderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingShippingPaymentError) {
+    throw existingShippingPaymentError;
+  }
+
+  let shippingPaymentId: string;
+
+  if (existingShippingPayment) {
+    const { error: shippingPaymentError } = await supabase
+      .from("shipping_payments")
+      .update({
+        amount_ngn: shippingCostNgn,
+        paid_at: null,
+        payment_reference: null,
+        provider: "paystack",
+        shipment_id: shipment.id,
+        status: "pending",
+      })
+      .eq("id", existingShippingPayment.id);
+
+    if (shippingPaymentError) {
+      throw shippingPaymentError;
+    }
+
+    shippingPaymentId = String(existingShippingPayment.id);
+  } else {
+    const { data: shippingPayment, error: shippingPaymentError } = await supabase
+      .from("shipping_payments")
+      .insert({
+        amount_ngn: shippingCostNgn,
+        order_id: input.orderId,
+        provider: "paystack",
+        shipment_id: shipment.id,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+    if (shippingPaymentError) {
+      throw shippingPaymentError;
+    }
+
+    shippingPaymentId = String(shippingPayment.id);
+  }
+
+  const grandTotal = asNumber(order.product_payment_total_ngn ?? 0) + shippingCostNgn;
+  const { error: updateError } = await supabase
+    .from("orders")
+    .update({
+      grand_total_ngn: grandTotal,
+      logistics_total_ngn: shippingCostNgn,
+      shipping_cost_ngn: shippingCostNgn,
+      shipping_payment_state: "pending",
+      status: "awaiting_shipping_payment",
+    })
+    .eq("id", input.orderId);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  await supabase.from("order_status_events").insert([
+    {
+      note: "Warehouse completed measurement and uploaded proof.",
+      order_id: input.orderId,
+      status: "weighed",
+    },
+    {
+      note: "Customer notification sent for shipping payment.",
+      order_id: input.orderId,
+      status: "awaiting_shipping_payment",
+    },
+  ]);
+
+  return {
+    paymentId: shippingPaymentId,
+    shippingCostNgn,
+    shipmentId: String(shipment.id),
+  };
 }
 
 export async function updateOrderStatus(input: { note?: string; orderId: string; status: OrderStatus }) {
