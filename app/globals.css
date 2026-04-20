@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-500: 58 130 122;
+  --brand-600: 39 105 98;
+  --brand-800: 24 66 70;
+  --brand-950: 9 19 31;
+  --accent-premium: 188 149 74;
+  --accent-premium-soft: 224 204 154;
+  --surface-base: 245 241 234;
+  --surface-alt: 236 231 221;
+  --surface-card: 255 255 255;
+  --border-subtle: 210 205 196;
+  --text-primary: 9 19 31;
+  --text-secondary: 64 78 92;
+  --text-muted: 108 121 133;
+  --danger: 176 58 58;
+  --success: 34 120 92;
+  --warning: 186 126 42;
+  --info: 70 110 155;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: rgb(var(--surface-base));
+  color: rgb(var(--text-primary));
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+}

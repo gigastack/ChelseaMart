@@ -1,15 +1,24 @@
 # Graphify specific
 .graphify/
-graphify-out/
+# graphify-out/
 .graphify_*.json
 .graphify_python
 skills/
-docs/superpowers/
 
 # Agent specific
 .agent/
+.worktrees/
+
+# Environment files
+.env*
+!.env.example
 
 # Standard ignores
 node_modules/
+.next/
+.npm-cache/
+*.tsbuildinfo
+playwright-report/
+test-results/
 .DS_Store
 Thumbs.db
