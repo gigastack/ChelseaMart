@@ -21,7 +21,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const displayedPrice = currency === "NGN" ? product.priceDisplayNgn : product.priceDisplay;
 
   return (
-    <Link className="group grid gap-4" href={`/products/${product.slug}`}>
+    <Link aria-label={product.title} className="group grid gap-4" href={`/products/${product.slug}`}>
       <article className="grid gap-4">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[var(--radius-lg)] border border-[rgba(var(--border-strong),0.42)] bg-[rgb(var(--surface-strong))]">
           <div

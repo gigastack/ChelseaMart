@@ -20,6 +20,7 @@ export default async function AdminProductsPage() {
 
   return (
     <section className="space-y-8">
+      <h2 className="sr-only">Products</h2>
       <div className="grid gap-6 border-b border-[rgba(var(--border-subtle),0.92)] pb-8 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-end">
         <div className="space-y-3">
           <Badge>Catalog control</Badge>

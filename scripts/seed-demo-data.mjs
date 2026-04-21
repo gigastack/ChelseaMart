@@ -496,6 +496,8 @@ async function seedDemoData() {
     );
   }
 
+  await supabase.from("consignees").update({ is_default: false }).eq("user_id", customerUser.id);
+
   await supabase.from("consignees").upsert(
     [
       {

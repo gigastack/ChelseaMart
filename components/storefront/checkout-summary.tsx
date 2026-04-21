@@ -58,7 +58,10 @@ export function CheckoutSummary({ summary }: CheckoutSummaryProps) {
         </div>
 
         <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-alt))] px-4 py-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
+          <p>No logistics charge is collected in this first payment.</p>
+          <p className="mt-2">
           Shipping is billed separately and becomes payable only after warehouse measurement and proof upload create a real logistics invoice.
+          </p>
         </div>
       </div>
     </section>

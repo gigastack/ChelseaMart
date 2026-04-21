@@ -17,6 +17,7 @@ export function StorefrontCatalogPage({ categories, products }: StorefrontCatalo
   return (
     <main className="bg-[rgb(var(--surface-base))]">
       <section className="mx-auto max-w-[var(--max-shell)] space-y-8 px-6 py-10 lg:px-10 lg:py-12">
+        <h2 className="sr-only">Curated products</h2>
         <div className="grid gap-6 border-b border-[rgba(var(--border-subtle),0.92)] pb-8 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-end">
           <div className="space-y-3">
             <Badge>Catalog</Badge>

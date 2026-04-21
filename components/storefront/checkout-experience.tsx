@@ -58,6 +58,7 @@ export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes
         <section className="grid gap-4 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
           <div className="space-y-2">
             <Badge>Checkout</Badge>
+            <h2 className="sr-only">Choose a route and pay for products only</h2>
             <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
               Accept the route now. Pay only for products now. Leave shipping for the warehouse phase.
             </h1>

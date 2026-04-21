@@ -22,6 +22,7 @@ export function OrdersPage({ orders }: OrdersPageProps) {
         <div className="space-y-3">
           <Badge>Service center</Badge>
           <div className="space-y-3">
+            <h2 className="sr-only">Product receipts, warehouse proof, and logistics invoices</h2>
             <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
               Product receipts, warehouse proof, shipping invoices, and delivery state in one service ledger.
             </h1>
@@ -100,7 +101,7 @@ export function OrdersPage({ orders }: OrdersPageProps) {
               <div>
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Warehouse proof</p>
                 <p className="mt-2 text-lg font-semibold text-[rgb(var(--text-primary))]">
-                  {order.shipment?.weighingProofPath ? "Available" : "Pending"}
+                  {order.shipment?.weighingProofPath ? "Proof uploaded" : "Awaiting proof"}
                 </p>
                 <p className="text-sm text-[rgb(var(--text-secondary))]">
                   {order.shipment?.measurementBasis

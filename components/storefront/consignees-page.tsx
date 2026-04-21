@@ -15,6 +15,9 @@ export function ConsigneesPage({ consignees }: ConsigneesPageProps) {
         <div className="space-y-3">
           <Badge>Consignees</Badge>
           <div className="space-y-3">
+            <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">
+              Nigeria hub recipients
+            </h2>
             <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
               Manage the recipients used when route acceptance turns into a real order.
             </h1>
@@ -33,7 +36,7 @@ export function ConsigneesPage({ consignees }: ConsigneesPageProps) {
           <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] px-4 py-4">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Default recipient</p>
             <p className="mt-2 text-lg font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-              {defaultConsignee?.fullName ?? "Not set"}
+              {defaultConsignee ? `${defaultConsignee.cityOrState} default active` : "Not set"}
             </p>
           </div>
         </div>
