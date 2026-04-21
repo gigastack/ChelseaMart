@@ -71,19 +71,20 @@ export function AdminImportWorkbench() {
           </label>
           <input
             className="min-h-11 w-full rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 text-sm text-[rgb(var(--text-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-500))]"
-            defaultValue="bag"
             id="keyword-search"
             name="keyword-search"
+            placeholder="Search term"
             type="text"
           />
         </div>
 
         <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-          Keyword search will use {elimPlatformLabels[keywordPlatform]}. This keeps 1688 and Taobao imports explicit
-          instead of silently defaulting to one marketplace.
+          Keyword imports are planned, but this screen currently exposes platform selection only.
         </p>
 
-        <Button variant="secondary">Preview keyword import</Button>
+        <Button disabled variant="secondary">
+          Keyword import not available yet
+        </Button>
       </article>
 
       <article className="grid gap-5 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
@@ -138,11 +139,13 @@ export function AdminImportWorkbench() {
 
         <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
           {effectiveUrlPlatform
-            ? `URL imports will resolve using ${elimPlatformLabels[effectiveUrlPlatform as ElimPlatform]}.`
-            : "If detection is uncertain, choose 1688 or Taobao before import so later availability checks keep the same source platform."}
+            ? `URL imports would resolve using ${elimPlatformLabels[effectiveUrlPlatform as ElimPlatform]}.`
+            : "Choose a platform before URL import support is turned on."}
         </p>
 
-        <Button variant="secondary">Preview URL import</Button>
+        <Button disabled variant="secondary">
+          URL import not available yet
+        </Button>
       </article>
 
       <article className="grid gap-5 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6 xl:col-span-2">
@@ -152,25 +155,17 @@ export function AdminImportWorkbench() {
               Batch intake posture
             </p>
             <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-              One paste area can behave like a manifest without leaving the queue.
+              Import support is limited right now.
             </h2>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              Operators can paste one URL, a newline-separated manifest, comma-separated values, or a spreadsheet
-              column copied directly from review sheets. Detection stays explicit so every later availability scan
-              inherits the same source platform.
+              The platform mapping controls are in place, but running new imports from this screen is not enabled yet.
             </p>
           </div>
 
           <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-5">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">
-              Job stages
+            <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
+              Use the recorded job history below to review actual imports, duplicates, and failures.
             </p>
-            <div className="grid gap-3 text-sm text-[rgb(var(--text-secondary))] md:grid-cols-4 xl:grid-cols-2">
-              <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-4 py-3">Queued</div>
-              <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-4 py-3">Fetching</div>
-              <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-4 py-3">Deduplicating</div>
-              <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-4 py-3">Draft created</div>
-            </div>
           </div>
         </div>
       </article>

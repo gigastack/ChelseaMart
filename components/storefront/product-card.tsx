@@ -50,37 +50,14 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="absolute inset-x-0 bottom-0 grid gap-3 p-4">
             <div className="flex items-center justify-between gap-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/75">
               <span>Shipping billed later</span>
-              <span>{product.weightKg} KG base weight</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/16 bg-[rgba(9,19,31,0.36)] px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.14em] text-white/88 backdrop-blur">
-                Air + Sea available
-              </span>
-              <span className="rounded-full border border-white/16 bg-[rgba(9,19,31,0.36)] px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.14em] text-white/88 backdrop-blur">
-                CNY browse
-              </span>
+              <span>{currency} view</span>
             </div>
           </div>
         </div>
 
         <div className="grid gap-2 border-t border-[rgba(var(--border-subtle),0.92)] pt-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="text-xl font-semibold tracking-[-0.03em] text-[rgb(var(--text-primary))]">{product.title}</h3>
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">
-                Curated local catalog record
-              </p>
-            </div>
-            <p className="text-sm font-medium text-[rgb(var(--text-secondary))]">{currency} view</p>
-          </div>
-
+          <h3 className="text-xl font-semibold tracking-[-0.03em] text-[rgb(var(--text-primary))]">{product.title}</h3>
           <p className="max-w-[34ch] text-sm leading-6 text-[rgb(var(--text-secondary))]">{product.description}</p>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium uppercase tracking-[0.14em] text-[rgb(var(--text-muted))]">
-            <span>NGN settlement at checkout</span>
-            <span>Route accepted before first payment</span>
-            <span>Warehouse proof before logistics invoice</span>
-          </div>
         </div>
       </article>
     </Link>

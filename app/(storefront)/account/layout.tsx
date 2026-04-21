@@ -25,11 +25,9 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[rgb(var(--brand-600))]">Service center</p>
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-                Keep product receipts, warehouse proof, and shipping actions in one place.
+                Orders, recipients, and shipping actions in one place.
               </h1>
-              <p className="text-sm leading-7 text-[rgb(var(--text-secondary))]">
-                This account mode is built around post-purchase clarity, not generic profile settings.
-              </p>
+              <p className="text-sm leading-7 text-[rgb(var(--text-secondary))]">Review order progress and manage your saved recipients.</p>
             </div>
           </div>
 

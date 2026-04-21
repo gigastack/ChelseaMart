@@ -5,13 +5,13 @@ export function PricingRulesForm() {
     <Card>
       <CardHeader>
         <CardDescription>Operating policy</CardDescription>
-        <CardTitle>Two-phase settlement rules</CardTitle>
+        <CardTitle>Payment flow</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 text-sm leading-6 text-[rgb(var(--text-secondary))]">
-        <p>1. Catalog browse stays CNY-native, with NGN as a customer display toggle only.</p>
-        <p>2. Product payment converts CNY to NGN at checkout and settles immediately through Paystack.</p>
-        <p>3. Logistics remains uncollected until warehouse measurement, proof upload, and USD invoice creation.</p>
-        <p>4. Shipping payment converts that USD invoice to NGN for customer settlement without rewriting history.</p>
+        <p>Catalog prices stay in CNY.</p>
+        <p>Customers pay product totals in NGN at checkout.</p>
+        <p>Shipping opens after warehouse measurement and proof upload.</p>
+        <p>Shipping invoices stay in USD and are paid in NGN.</p>
       </CardContent>
     </Card>
   );

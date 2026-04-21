@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { SignOutForm } from "@/components/storefront/sign-out-form";
 import { requireAdminUser } from "@/lib/auth/guards";
 import { hasSupabaseAuthEnv } from "@/lib/config/env";
 
@@ -12,5 +13,5 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     await requireAdminUser("/account/orders");
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminShell signOutControl={<SignOutForm size="sm" variant="secondary" />}>{children}</AdminShell>;
 }

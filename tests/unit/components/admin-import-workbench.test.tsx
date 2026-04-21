@@ -10,7 +10,9 @@ describe("AdminImportWorkbench", () => {
     fireEvent.click(taobaoButton);
 
     expect(taobaoButton).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/keyword search will use taobao/i)).toBeVisible();
+    expect(
+      screen.getByText(/keyword imports are planned, but this screen currently exposes platform selection only/i),
+    ).toBeVisible();
   });
 
   it("auto-detects taobao urls and exposes the inferred platform", () => {
@@ -20,6 +22,6 @@ describe("AdminImportWorkbench", () => {
     fireEvent.change(urlInput, { target: { value: "https://item.taobao.com/item.htm?id=7001" } });
 
     expect(screen.getByText(/taobao inferred from the first url/i)).toBeVisible();
-    expect(screen.getByText(/url imports will resolve using taobao/i)).toBeVisible();
+    expect(screen.getByText(/url imports would resolve using taobao/i)).toBeVisible();
   });
 });

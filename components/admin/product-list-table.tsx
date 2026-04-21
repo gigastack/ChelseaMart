@@ -3,11 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeader, DataTableRow } from "@/components/ui/table";
 
 export type AdminProductRow = {
+  coverImageUrl: string | null;
   effectiveMoq: number;
   id: string;
   moqOverride: number | null;
   priceCny: number;
   priceNgn: number;
+  shortDescription: string;
   sourceType: "api" | "manual";
   sourcePriceCny: number;
   status: "draft" | "live" | "removed" | "unavailable";
@@ -45,7 +47,7 @@ export function ProductListTable({ products }: ProductListTableProps) {
           <DataTableHead>Status</DataTableHead>
           <DataTableHead>Source</DataTableHead>
           <DataTableHead>MOQ</DataTableHead>
-          <DataTableHead>Weight</DataTableHead>
+          <DataTableHead>Image</DataTableHead>
           <DataTableHead>Pricing</DataTableHead>
           <DataTableHead>Updated</DataTableHead>
         </DataTableRow>
@@ -68,7 +70,7 @@ export function ProductListTable({ products }: ProductListTableProps) {
                 {product.moqOverride === null ? "global default" : "product override"}
               </div>
             </DataTableCell>
-            <DataTableCell>{product.weightKg ? `${product.weightKg} kg` : "Missing"}</DataTableCell>
+            <DataTableCell>{product.coverImageUrl ? "Added" : "Missing"}</DataTableCell>
             <DataTableCell>
               <div className="font-medium text-[rgb(var(--text-primary))]">{formatCny(product.priceCny)}</div>
               <div className="text-xs text-[rgb(var(--text-secondary))]">{formatNaira(product.priceNgn)} payable</div>

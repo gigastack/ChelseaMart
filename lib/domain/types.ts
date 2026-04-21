@@ -176,6 +176,7 @@ export type Order = {
   paymentReference: string | null;
   productPaymentState: ProductPaymentStatus;
   shippingPaymentState: ShippingPaymentStatus;
+  statusEvents: OrderStatusEvent[];
   createdAt: string;
 };
 

@@ -24,9 +24,6 @@ export function CheckoutSummary({ summary }: CheckoutSummaryProps) {
         <div className="space-y-2">
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">3. Review and pay</p>
           <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Products now, shipping later</h2>
-          <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-            This rail makes the split explicit so no one mistakes the first charge for a landed total.
-          </p>
         </div>
 
         <div className="grid gap-3 border-y border-[rgba(var(--border-subtle),0.92)] py-4 text-sm">
@@ -47,8 +44,8 @@ export function CheckoutSummary({ summary }: CheckoutSummaryProps) {
             <span className="font-medium text-[rgb(var(--text-primary))]">{formatNgn(summary.serviceFeeNgn)}</span>
           </div>
           <div className="flex items-center justify-between gap-4 text-[rgb(var(--text-secondary))]">
-            <span>Shipping invoice collected now</span>
-            <span className="font-medium text-[rgb(var(--text-primary))]">NGN 0</span>
+            <span>Shipping collected now</span>
+            <span className="font-medium text-[rgb(var(--text-primary))]">Not charged</span>
           </div>
         </div>
 
@@ -58,10 +55,7 @@ export function CheckoutSummary({ summary }: CheckoutSummaryProps) {
         </div>
 
         <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-alt))] px-4 py-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
-          <p>No logistics charge is collected in this first payment.</p>
-          <p className="mt-2">
-          Shipping is billed separately and becomes payable only after warehouse measurement and proof upload create a real logistics invoice.
-          </p>
+          Shipping is billed separately and becomes payable only after warehouse measurement and proof upload.
         </div>
       </div>
     </section>

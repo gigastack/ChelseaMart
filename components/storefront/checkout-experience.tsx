@@ -39,6 +39,8 @@ function buildSummary(cartItems: CartItemRecord[], cnyToNgnRate: number) {
 
 export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes }: CheckoutExperienceProps) {
   const defaultConsignee = consignees.find((consignee) => consignee.isDefault) ?? consignees[0];
+  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const moqValid = cartItems.every((item) => item.quantity >= item.effectiveMoq);
   const [selectedRouteId, setSelectedRouteId] = useState(routes[0]?.id ?? "");
   const [selectedConsigneeId, setSelectedConsigneeId] = useState(defaultConsignee?.id ?? "");
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -60,26 +62,25 @@ export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes
             <Badge>Checkout</Badge>
             <h2 className="sr-only">Choose a route and pay for products only</h2>
             <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-              Accept the route now. Pay only for products now. Leave shipping for the warehouse phase.
+              Choose a route. Pay for products. Shipping comes later.
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              This flow keeps the two-payment model legible: buyer and consignee first, route agreement second, then a
-              product-only Paystack handoff with shipping still set to zero.
+              Confirm the delivery contact, accept the route terms, and start the first payment for products only.
             </p>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 py-4 text-sm text-[rgb(var(--text-secondary))]">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Cart lines</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{cartItems.length}</p>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Items</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{itemCount}</p>
             </div>
             <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 py-4 text-sm text-[rgb(var(--text-secondary))]">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">MOQ posture</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Valid</p>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">MOQ check</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{moqValid ? "Ready" : "Fix cart"}</p>
             </div>
             <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 py-4 text-sm text-[rgb(var(--text-secondary))]">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Shipping now</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">NGN 0</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Not charged</p>
             </div>
           </div>
         </section>
@@ -88,26 +89,32 @@ export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes
           <div className="space-y-2">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">1. Consignee</p>
             <h2 className="text-2xl font-semibold tracking-[-0.03em] text-[rgb(var(--text-primary))]">
-              Choose who receives the shipment at the hub
+              Choose who receives the shipment
             </h2>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.92fr)]">
-            <label className="grid gap-2 text-sm font-medium text-[rgb(var(--text-primary))]" htmlFor="consignee-select">
-              Saved consignees
-              <select
-                className="min-h-12 rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 text-sm text-[rgb(var(--text-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-500))]"
-                id="consignee-select"
-                onChange={(event) => setSelectedConsigneeId(event.target.value)}
-                value={selectedConsigneeId}
-              >
-                {consignees.map((consignee) => (
-                  <option key={consignee.id} value={consignee.id}>
-                    {consignee.fullName} · {consignee.cityOrState}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {consignees.length ? (
+              <label className="grid gap-2 text-sm font-medium text-[rgb(var(--text-primary))]" htmlFor="consignee-select">
+                Saved consignees
+                <select
+                  className="min-h-12 rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 text-sm text-[rgb(var(--text-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-500))]"
+                  id="consignee-select"
+                  onChange={(event) => setSelectedConsigneeId(event.target.value)}
+                  value={selectedConsigneeId}
+                >
+                  {consignees.map((consignee) => (
+                    <option key={consignee.id} value={consignee.id}>
+                      {consignee.fullName} · {consignee.cityOrState}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
+                Save at least one consignee before checkout can continue.
+              </div>
+            )}
 
             <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-alt))] p-4">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Selected consignee</p>
@@ -170,9 +177,9 @@ export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes
               <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
                 <p className="font-semibold text-[rgb(var(--text-primary))]">What happens after payment</p>
                 <div className="mt-3 space-y-2">
-                  <p>1. Products are paid in NGN now.</p>
-                  <p>2. The order enters the warehouse queue.</p>
-                  <p>3. Shipping becomes payable only after measurement and proof.</p>
+                  <p>1. You pay for products in Naira now.</p>
+                  <p>2. The order moves to the warehouse queue.</p>
+                  <p>3. Shipping opens only after measurement and proof.</p>
                 </div>
               </div>
             </div>
@@ -189,7 +196,12 @@ export function CheckoutExperience({ cartItems, cnyToNgnRate, consignees, routes
               </span>
             </label>
 
-            <Button className="w-full" size="lg" type="submit">
+            <Button
+              className="w-full"
+              disabled={!selectedConsignee || !selectedRoute || !acceptTerms || !moqValid || !cartItems.length}
+              size="lg"
+              type="submit"
+            >
               Pay for products with Paystack
             </Button>
           </form>

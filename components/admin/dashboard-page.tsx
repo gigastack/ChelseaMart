@@ -12,9 +12,9 @@ type AdminDashboardPageProps = {
 };
 
 const actionLinks = [
-  { href: "/admin/orders", label: "Orders and warehouse queue" },
-  { href: "/admin/products", label: "Catalog and publish readiness" },
-  { href: "/admin/bi", label: "BI and payment funnel" },
+  { href: "/admin/orders", label: "Open orders" },
+  { href: "/admin/products", label: "Open products" },
+  { href: "/admin/bi", label: "Open insights" },
 ];
 
 export function AdminDashboardPage({ overviewTiles }: AdminDashboardPageProps) {
@@ -25,11 +25,10 @@ export function AdminDashboardPage({ overviewTiles }: AdminDashboardPageProps) {
           <Badge>Dashboard</Badge>
           <div className="space-y-3">
             <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-              One control surface for warehouse intake, catalog posture, and split-ledger health.
+              See what needs action.
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              The admin home should answer three questions quickly: what is blocked, what is due, and which queue needs
-              an operator next.
+              Use this page to spot blocked work, open invoices, and catalog gaps.
             </p>
           </div>
         </div>
@@ -59,19 +58,19 @@ export function AdminDashboardPage({ overviewTiles }: AdminDashboardPageProps) {
           <div className="space-y-2">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgba(255,255,255,0.72)]">Operating posture</p>
             <h2 className="text-3xl font-semibold tracking-[-0.04em]">
-              Product settlement and logistics settlement stay separated all the way through delivery.
+              Product and shipping payments stay separate from start to finish.
             </h2>
           </div>
           <div className="grid gap-4 text-sm leading-7 text-[rgba(255,255,255,0.82)] md:grid-cols-3">
-            <p>Catalog pricing remains native in CNY, with NGN shown only as the payable product-settlement view.</p>
-            <p>Warehouse measurement and proof are the authoritative trigger for the USD logistics invoice.</p>
-            <p>Admin settings own the two live exchange rates and the global MOQ inherited by new products.</p>
+            <p>Catalog prices stay in CNY, while customers pay product totals in Naira.</p>
+            <p>Shipping opens only after warehouse measurement and proof upload.</p>
+            <p>Rates and the default MOQ are controlled from settings.</p>
           </div>
         </div>
 
         <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Priority links</p>
-          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Move directly to the queues that need action.</h2>
+          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Jump straight to the active queue.</h2>
           <div className="grid gap-3">
             {actionLinks.map((link) => (
               <Link

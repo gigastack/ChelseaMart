@@ -1,4 +1,5 @@
 import { getPublicEnv } from "@/lib/config/env";
+import { readSessionCartItems, type SessionCartItem } from "@/lib/cart/session";
 import type {
   MeasurementBasis,
   OrderStatus,
@@ -77,8 +78,17 @@ export type ShipmentRecord = {
   weighingProofPath: string | null;
 };
 
+export type OrderStatusEventRecord = {
+  createdAt: string;
+  id: string;
+  note: string | null;
+  orderId: string;
+  status: OrderStatus;
+};
+
 export type OrderRecord = {
   consigneeId: string;
+  createdAt: string;
   createdLabel: string;
   grandTotalNgn: number;
   id: string;
@@ -100,6 +110,7 @@ export type OrderRecord = {
   shippingCostNgn: number | null;
   shippingPaymentReference: string | null;
   shippingPaymentState: ShippingPaymentStatus;
+  statusEvents: OrderStatusEventRecord[];
   status: OrderStatus;
 };
 
@@ -222,12 +233,28 @@ function mapShipmentRow(shipment: Record<string, unknown> | null | undefined): S
   };
 }
 
+function mapOrderStatusEventRow(event: Record<string, unknown>): OrderStatusEventRecord {
+  return {
+    createdAt: String(event.created_at ?? ""),
+    id: String(event.id ?? ""),
+    note: typeof event.note === "string" ? event.note : null,
+    orderId: String(event.order_id ?? ""),
+    status: String(event.status ?? "cart") as OrderStatus,
+  };
+}
+
 function mapOrderRow(order: Record<string, unknown>): OrderRecord {
   const orderItems = Array.isArray(order.order_items) ? order.order_items : [];
   const productPayments = Array.isArray(order.product_payments) ? order.product_payments : [];
   const shippingPayments = Array.isArray(order.shipping_payments) ? order.shipping_payments : [];
-  const shipmentRows = Array.isArray(order.order_shipments) ? order.order_shipments : [];
-  const shipment = shipmentRows.length > 0 ? mapShipmentRow(shipmentRows[0] as Record<string, unknown>) : null;
+  const statusEvents = Array.isArray(order.order_status_events) ? order.order_status_events : [];
+  const shipment = Array.isArray(order.order_shipments)
+    ? order.order_shipments.length > 0
+      ? mapShipmentRow(order.order_shipments[0] as Record<string, unknown>)
+      : null
+    : order.order_shipments && typeof order.order_shipments === "object"
+      ? mapShipmentRow(order.order_shipments as Record<string, unknown>)
+      : null;
   const productPaymentReference =
     productPayments[0] && typeof productPayments[0] === "object" && "payment_reference" in productPayments[0]
       ? String(productPayments[0].payment_reference ?? "")
@@ -239,6 +266,7 @@ function mapOrderRow(order: Record<string, unknown>): OrderRecord {
 
   return {
     consigneeId: String(order.consignee_id),
+    createdAt: String(order.created_at ?? ""),
     createdLabel: formatCreatedLabel(String(order.created_at)),
     grandTotalNgn: asNumber(order.grand_total_ngn ?? 0),
     id: String(order.id),
@@ -274,6 +302,9 @@ function mapOrderRow(order: Record<string, unknown>): OrderRecord {
       order.shipping_payment_state === "pending"
         ? order.shipping_payment_state
         : "not_due",
+    statusEvents: statusEvents
+      .map((event) => mapOrderStatusEventRow(event as Record<string, unknown>))
+      .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()),
     status: String(order.status ?? "cart") as OrderStatus,
   };
 }
@@ -283,7 +314,7 @@ async function selectOrders(where: { orderId?: string; userId?: string } = {}) {
   let query = supabase
     .from("orders")
     .select(
-      "id, consignee_id, route, shipping_route_id, shipping_route_version_id, route_accepted, route_accepted_at, route_snapshot, status, currency, product_subtotal_cny, product_subtotal_ngn, product_payment_cny_to_ngn_rate, service_fee_ngn, product_payment_total_ngn, logistics_total_ngn, shipping_cost_ngn, grand_total_ngn, payment_reference, product_payment_state, shipping_payment_state, created_at, order_items(id, product_id, product_title_snapshot, quantity, moq_snapshot, effective_moq_snapshot, weight_kg_snapshot, volume_cbm_snapshot, product_unit_price_cny_snapshot, product_unit_price_ngn_snapshot, logistics_fee_ngn_snapshot, line_total_cny_snapshot, line_total_ngn_snapshot, products(slug, cover_image_url)), order_shipments(id, measurement_basis, measured_weight_kg, measured_volume_cbm, measured_at, measured_by_profile_id, weighing_proof_path, weighing_proof_mime_type, shipping_quote_snapshot, shipping_cost_usd, shipping_cost_ngn, customer_notified_at), product_payments(id, payment_reference, status, amount_ngn, paid_at), shipping_payments(id, payment_reference, status, amount_ngn, paid_at)",
+      "id, consignee_id, route, shipping_route_id, shipping_route_version_id, route_accepted, route_accepted_at, route_snapshot, status, currency, product_subtotal_cny, product_subtotal_ngn, product_payment_cny_to_ngn_rate, service_fee_ngn, product_payment_total_ngn, logistics_total_ngn, shipping_cost_ngn, grand_total_ngn, payment_reference, product_payment_state, shipping_payment_state, created_at, order_items(id, product_id, product_title_snapshot, quantity, moq_snapshot, effective_moq_snapshot, weight_kg_snapshot, volume_cbm_snapshot, product_unit_price_cny_snapshot, product_unit_price_ngn_snapshot, logistics_fee_ngn_snapshot, line_total_cny_snapshot, line_total_ngn_snapshot, products(slug, cover_image_url)), order_shipments(id, measurement_basis, measured_weight_kg, measured_volume_cbm, measured_at, measured_by_profile_id, weighing_proof_path, weighing_proof_mime_type, shipping_quote_snapshot, shipping_cost_usd, shipping_cost_ngn, customer_notified_at), order_status_events(id, order_id, status, note, created_at), product_payments(id, payment_reference, status, amount_ngn, paid_at), shipping_payments(id, payment_reference, status, amount_ngn, paid_at)",
     )
     .order("created_at", { ascending: false });
 
@@ -366,50 +397,67 @@ async function getShippingRoutesWithVersions() {
     .filter((route): route is ShippingRouteRecord => Boolean(route));
 }
 
-export async function listCheckoutCartItems() {
+export async function listCheckoutCartItems(sessionItems?: SessionCartItem[]) {
   const supabase = createSupabaseServiceRoleClient();
   const settings = await getCommerceSettings();
+  const activeSessionItems = sessionItems ?? (await readSessionCartItems());
+
+  if (!activeSessionItems.length) {
+    return [];
+  }
+
+  const productIds = [...new Set(activeSessionItems.map((item) => item.productId))];
   const { data, error } = await supabase
     .from("products")
     .select("id, slug, title, moq_override, sell_price_cny, weight_kg, volume_cbm, cover_image_url")
     .eq("status", "live")
-    .order("featured", { ascending: false })
-    .limit(1);
+    .in("id", productIds);
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map((product) => ({
-    effectiveMoq: resolveEffectiveMoq({
+  const productsById = new Map((data ?? []).map((product) => [String(product.id), product]));
+
+  return activeSessionItems.flatMap((sessionItem) => {
+    const product = productsById.get(sessionItem.productId);
+
+    if (!product) {
+      return [];
+    }
+
+    const effectiveMoq = resolveEffectiveMoq({
       defaultMoq: settings.defaultMoq,
       moqOverride: asNullableNumber(product.moq_override),
-    }),
-    id: `cart-${product.id}`,
-    imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
-    priceDisplay: formatMoney(asNumber(product.sell_price_cny ?? 0), "CNY"),
-    priceDisplayNgn: formatMoney(
-      convertCnyToNgn({
-        cnyToNgnRate: settings.cnyToNgnRate,
-        sourcePriceCny: asNumber(product.sell_price_cny ?? 0),
-      }),
-      "NGN",
-    ),
-    productId: product.id,
-    quantity: resolveEffectiveMoq({
-      defaultMoq: settings.defaultMoq,
-      moqOverride: asNullableNumber(product.moq_override),
-    }),
-    sellPriceCny: asNumber(product.sell_price_cny ?? 0),
-    sellPriceNgn: convertCnyToNgn({
+    });
+    const sellPriceCny = asNumber(product.sell_price_cny ?? 0);
+    const sellPriceNgn = convertCnyToNgn({
       cnyToNgnRate: settings.cnyToNgnRate,
-      sourcePriceCny: asNumber(product.sell_price_cny ?? 0),
-    }),
-    slug: product.slug,
-    title: product.title,
-    volumeCbm: asNullableNumber(product.volume_cbm),
-    weightKg: asNullableNumber(product.weight_kg),
-  }));
+      sourcePriceCny: sellPriceCny,
+    });
+
+    return [
+      {
+        effectiveMoq,
+        id: `cart-${product.id}`,
+        imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
+        priceDisplay: formatMoney(sellPriceCny, "CNY"),
+        priceDisplayNgn: formatMoney(sellPriceNgn, "NGN"),
+        productId: String(product.id),
+        quantity: sessionItem.quantity,
+        sellPriceCny,
+        sellPriceNgn,
+        slug: String(product.slug),
+        title: String(product.title),
+        volumeCbm: asNullableNumber(product.volume_cbm),
+        weightKg: asNullableNumber(product.weight_kg),
+      } satisfies CartItemRecord,
+    ];
+  });
+}
+
+export async function findCheckoutCartProduct(productId: string) {
+  return (await listCheckoutCartItems([{ productId, quantity: 1 }])).at(0) ?? null;
 }
 
 export async function listCheckoutShippingRoutes() {
@@ -520,6 +568,125 @@ export async function createConsigneeForUser(
   }
 
   return mapConsigneeRow(data as Record<string, unknown>);
+}
+
+export async function updateConsigneeForUser(
+  userId: string,
+  consigneeId: string,
+  input: {
+    cityOrState: string;
+    fullName: string;
+    isDefault: boolean;
+    notes?: string;
+    phone: string;
+  },
+) {
+  const supabase = createSupabaseServiceRoleClient();
+
+  if (input.isDefault) {
+    const { error: unsetError } = await supabase.from("consignees").update({ is_default: false }).eq("user_id", userId);
+
+    if (unsetError) {
+      throw unsetError;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("consignees")
+    .update({
+      city_or_state: input.cityOrState,
+      full_name: input.fullName,
+      is_default: input.isDefault,
+      notes: input.notes ?? "",
+      phone: input.phone,
+    })
+    .eq("id", consigneeId)
+    .eq("user_id", userId)
+    .select("id, full_name, phone, city_or_state, notes, is_default")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapConsigneeRow(data as Record<string, unknown>);
+}
+
+export async function setDefaultConsigneeForUser(userId: string, consigneeId: string) {
+  const supabase = createSupabaseServiceRoleClient();
+  const { error: unsetError } = await supabase.from("consignees").update({ is_default: false }).eq("user_id", userId);
+
+  if (unsetError) {
+    throw unsetError;
+  }
+
+  const { data, error } = await supabase
+    .from("consignees")
+    .update({ is_default: true })
+    .eq("id", consigneeId)
+    .eq("user_id", userId)
+    .select("id, full_name, phone, city_or_state, notes, is_default")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapConsigneeRow(data as Record<string, unknown>);
+}
+
+export async function deleteConsigneeForUser(userId: string, consigneeId: string) {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data: existing, error: existingError } = await supabase
+    .from("consignees")
+    .select("id, is_default")
+    .eq("id", consigneeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (!existing) {
+    return;
+  }
+
+  const { error: deleteError } = await supabase.from("consignees").delete().eq("id", consigneeId).eq("user_id", userId);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  if (!existing.is_default) {
+    return;
+  }
+
+  const { data: replacement, error: replacementError } = await supabase
+    .from("consignees")
+    .select("id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (replacementError) {
+    throw replacementError;
+  }
+
+  if (!replacement?.id) {
+    return;
+  }
+
+  const { error: setDefaultError } = await supabase
+    .from("consignees")
+    .update({ is_default: true })
+    .eq("id", replacement.id)
+    .eq("user_id", userId);
+
+  if (setDefaultError) {
+    throw setDefaultError;
+  }
 }
 
 export async function createRouteAcceptedOrderRecord(input: RouteAcceptedOrderInput) {

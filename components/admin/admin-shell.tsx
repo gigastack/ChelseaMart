@@ -3,9 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Boxes, Cog, CreditCard, Inbox, LayoutDashboard, Search, Truck } from "lucide-react";
+import { BarChart3, Boxes, Cog, CreditCard, Inbox, LayoutDashboard, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -19,36 +18,37 @@ const navItems = [
 
 const pageMeta: Record<string, { description: string; title: string }> = {
   "/admin": {
-    description: "Warehouse, invoicing, catalog posture, and split-revenue health from one entry point.",
-    title: "Operations control room",
+    description: "See what needs action across orders, products, and payments.",
+    title: "Operations dashboard",
   },
   "/admin/bi": {
-    description: "Revenue, warehouse velocity, and catalog performance with finance and ops in the same frame.",
-    title: "Business intelligence",
+    description: "Track revenue, payments, and warehouse workload.",
+    title: "Business insights",
   },
   "/admin/imports": {
-    description: "Batch ingest, logs, and ELIM visibility without leaving the operator shell.",
-    title: "Import engine",
+    description: "Review import activity and unavailable source products.",
+    title: "Imports",
   },
   "/admin/orders": {
-    description: "Warehouse actions, proof, and shipping invoice progression on one queue.",
-    title: "Warehouse queue",
+    description: "Move orders through warehouse, shipping, and delivery.",
+    title: "Orders",
   },
   "/admin/products": {
-    description: "Merchandising posture, publish readiness, and source truth in one product hub.",
-    title: "Catalog control",
+    description: "Create, edit, and publish catalog products.",
+    title: "Products",
   },
   "/admin/settings": {
-    description: "Economic levers, route posture, and env-managed integration visibility.",
-    title: "Operational configuration",
+    description: "Manage rates, defaults, routes, and integration status.",
+    title: "Settings",
   },
 };
 
 type AdminShellProps = {
   children: ReactNode;
+  signOutControl?: ReactNode;
 };
 
-export function AdminShell({ children }: AdminShellProps) {
+export function AdminShell({ children, signOutControl }: AdminShellProps) {
   const pathname = usePathname();
   const meta = pageMeta[pathname] ?? pageMeta["/admin"];
 
@@ -65,17 +65,16 @@ export function AdminShell({ children }: AdminShellProps) {
         <div className="space-y-6 p-6">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">Chelsea Mart</p>
-            <h1 className="text-2xl font-semibold tracking-[-0.05em] text-white">Admin control room</h1>
-            <p className="text-sm leading-6 text-white/68">
-              High-density operations mode for imports, orders, settings, and split-ledger visibility.
-            </p>
+            <h1 className="text-2xl font-semibold tracking-[-0.05em] text-white">Admin</h1>
+            <p className="text-sm leading-6 text-white/68">Catalog, warehouse, and payments in one place.</p>
           </div>
-          <Badge className="w-fit border-white/10 bg-white/10 text-white/76">ELIM Sync: Healthy</Badge>
+          <Badge className="w-fit border-white/10 bg-white/10 text-white/76">Live data only</Badge>
         </div>
 
         <nav className="grid gap-1 px-4">
           {navItems.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active =
+              item.href === "/admin" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 
             return (
@@ -116,6 +115,7 @@ export function AdminShell({ children }: AdminShellProps) {
               </div>
             </div>
           </div>
+          <div className="mt-4">{signOutControl}</div>
         </div>
       </aside>
 
@@ -137,17 +137,9 @@ export function AdminShell({ children }: AdminShellProps) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <label className="relative block min-w-[280px]">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[rgb(var(--text-muted))]" />
-                <Input
-                  aria-label="Admin global search"
-                  className="pl-9"
-                  placeholder="Search IDs, titles, URLs, or consignees"
-                />
-              </label>
+            <div className="flex flex-wrap items-center gap-2">
               <Badge className="border-[rgba(var(--accent-premium),0.22)] bg-[rgba(var(--accent-premium),0.12)] text-[rgb(var(--text-primary))]">
-                Ops state synced
+                Product and shipping payments stay separate
               </Badge>
             </div>
           </div>

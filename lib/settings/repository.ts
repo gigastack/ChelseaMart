@@ -19,6 +19,11 @@ export type CommerceSettingsRecord = {
   usdToNgnRate: number;
 };
 
+export type IntegrationActivityRecord = {
+  elimLastRecordedAt: string | null;
+  paystackLastRecordedAt: string | null;
+};
+
 export async function getCommerceSettings(): Promise<CommerceSettingsRecord> {
   const supabase = createSupabaseServiceRoleClient();
   const [{ data: pairs, error: pairsError }, { data: settings, error: settingsError }] = await Promise.all([
@@ -91,4 +96,45 @@ export async function updateCommerceSettings(input: CommerceSettingsRecord) {
   if (currencyError) {
     throw currencyError;
   }
+}
+
+export async function getIntegrationActivity(): Promise<IntegrationActivityRecord> {
+  const supabase = createSupabaseServiceRoleClient();
+  const [
+    { data: paystackEvent, error: paystackError },
+    { data: latestSourceSync, error: sourceError },
+    { data: latestImportJob, error: importError },
+  ] = await Promise.all([
+    supabase.from("paystack_events").select("processed_at").order("processed_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase
+      .from("product_sources")
+      .select("last_synced_at")
+      .not("last_synced_at", "is", null)
+      .order("last_synced_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("import_jobs").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+
+  if (paystackError) {
+    throw paystackError;
+  }
+
+  if (sourceError) {
+    throw sourceError;
+  }
+
+  if (importError) {
+    throw importError;
+  }
+
+  return {
+    elimLastRecordedAt:
+      typeof latestSourceSync?.last_synced_at === "string"
+        ? latestSourceSync.last_synced_at
+        : typeof latestImportJob?.created_at === "string"
+          ? latestImportJob.created_at
+          : null,
+    paystackLastRecordedAt: typeof paystackEvent?.processed_at === "string" ? paystackEvent.processed_at : null,
+  };
 }

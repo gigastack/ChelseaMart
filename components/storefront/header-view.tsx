@@ -27,9 +27,9 @@ export function StorefrontHeaderView({ access, signOutControl }: StorefrontHeade
     <header className="sticky top-0 z-30 border-b border-[rgba(var(--border-subtle),0.9)] bg-[rgba(var(--surface-base),0.92)] backdrop-blur-xl">
       <div className="hidden border-b border-[rgba(var(--border-subtle),0.8)] lg:block">
         <div className="mx-auto flex max-w-[var(--max-shell)] items-center justify-between px-6 py-2 text-xs font-medium uppercase tracking-[0.18em] text-[rgb(var(--text-muted))] lg:px-10">
-          <p>Curated China-market sourcing with visible logistics truth.</p>
+          <p>Browse in CNY.</p>
           <div className="flex items-center gap-3">
-            <span>Default browse: CNY</span>
+            <span>Pay in NGN</span>
             <span className="text-[rgb(var(--brand-600))]">Shipping billed later</span>
           </div>
         </div>
@@ -50,7 +50,7 @@ export function StorefrontHeaderView({ access, signOutControl }: StorefrontHeade
               <input
                 className="h-12 w-full rounded-full border border-[rgba(var(--border-strong),0.65)] bg-[rgba(var(--surface-card),0.92)] pl-11 pr-4 text-sm text-[rgb(var(--text-primary))] shadow-[0_20px_50px_rgba(4,47,46,0.08)] outline-none transition-colors placeholder:text-[rgb(var(--text-muted))] focus:border-[rgba(var(--brand-500),0.6)]"
                 name="q"
-                placeholder="Search curated products, materials, categories, or supplier types"
+                placeholder="Search products"
                 type="search"
               />
             </label>
@@ -125,7 +125,7 @@ export function StorefrontHeaderView({ access, signOutControl }: StorefrontHeade
               MOQ stays visible
             </Badge>
             <Badge className="hidden sm:inline-flex border-[rgba(var(--accent-premium),0.22)] bg-[rgba(var(--accent-premium),0.14)] text-[rgb(var(--text-primary))]">
-              Products in {currency} • Pay NGN
+              {currency} view
             </Badge>
           </div>
         </div>

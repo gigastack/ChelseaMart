@@ -8,12 +8,6 @@ type StorefrontProductDetailPageProps = {
   product: StorefrontProductRecord | null;
 };
 
-const purchaseSignals = [
-  "Route is accepted before the first payment.",
-  "Shipping is measured and invoiced later.",
-  "Warehouse proof is surfaced in the customer account.",
-];
-
 export function StorefrontProductDetailPage({ product }: StorefrontProductDetailPageProps) {
   if (!product) {
     notFound();
@@ -24,7 +18,7 @@ export function StorefrontProductDetailPage({ product }: StorefrontProductDetail
       <section className="mx-auto max-w-[var(--max-shell)] space-y-10 px-6 py-10 lg:px-10 lg:py-12">
         <div className="grid gap-4 border-b border-[rgba(var(--border-subtle),0.92)] pb-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-end">
           <div className="space-y-3">
-            <Badge>Product record</Badge>
+            <Badge>Product</Badge>
             <div className="space-y-3">
               <h1 className="max-w-4xl text-5xl font-semibold leading-[0.94] tracking-[-0.06em] text-[rgb(var(--text-primary))]">
                 {product.title}
@@ -33,19 +27,12 @@ export function StorefrontProductDetailPage({ product }: StorefrontProductDetail
             </div>
           </div>
 
-          <div className="grid gap-3">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">
-              Purchase posture
-            </p>
-            <div className="grid gap-3">
-              {purchaseSignals.map((signal) => (
-                <div
-                  key={signal}
-                  className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] px-4 py-3 text-sm leading-6 text-[rgb(var(--text-secondary))]"
-                >
-                  {signal}
-                </div>
-              ))}
+          <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-5">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Quick facts</p>
+            <div className="grid gap-3 text-sm text-[rgb(var(--text-secondary))]">
+              <p>MOQ {product.effectiveMoq}</p>
+              <p>Browse in CNY, pay in NGN.</p>
+              <p>Shipping is billed after warehouse proof.</p>
             </div>
           </div>
         </div>
@@ -57,16 +44,9 @@ export function StorefrontProductDetailPage({ product }: StorefrontProductDetail
             <section className="grid gap-8 border-t border-[rgba(var(--border-subtle),0.92)] pt-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
               <div className="space-y-4">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">
-                  Product notes
+                  About this product
                 </p>
-                <div className="grid gap-4 text-sm leading-7 text-[rgb(var(--text-secondary))]">
-                  <p>{product.longDescription}</p>
-                  <p>
-                    The browse surface stays clean on purpose. Route choice, route terms, and shipping payment are
-                    handled in later steps so the first product decision is honest about what is known now versus what
-                    is confirmed after the warehouse touches the goods.
-                  </p>
-                </div>
+                <p className="text-sm leading-7 text-[rgb(var(--text-secondary))]">{product.longDescription}</p>
               </div>
 
               <div className="grid gap-4">
@@ -81,25 +61,16 @@ export function StorefrontProductDetailPage({ product }: StorefrontProductDetail
 
                 <div className="border-t border-[rgba(var(--border-subtle),0.92)] pt-4">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">
-                    Base weight
+                    Product payment
                   </p>
                   <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-                    {product.weightKg} KG
+                    NGN at checkout
                   </p>
                 </div>
 
                 <div className="border-t border-[rgba(var(--border-subtle),0.92)] pt-4">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Specs</p>
-                  <div className="mt-3 grid gap-2">
-                    {product.specs.map((spec) => (
-                      <div
-                        key={spec}
-                        className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] px-4 py-3 text-sm text-[rgb(var(--text-secondary))]"
-                      >
-                        {spec}
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Shipping</p>
+                  <p className="mt-2 text-sm leading-6 text-[rgb(var(--text-secondary))]">The shipping invoice opens after warehouse measurement and proof upload.</p>
                 </div>
               </div>
             </section>

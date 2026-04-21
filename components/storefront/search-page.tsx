@@ -7,10 +7,11 @@ type StorefrontSearchPageProps = {
   query?: string;
 };
 
-export function StorefrontSearchPage({ products, query = "product" }: StorefrontSearchPageProps) {
-  const results = products.filter((product) =>
-    `${product.title} ${product.category}`.toLowerCase().includes(query.toLowerCase()),
-  );
+export function StorefrontSearchPage({ products, query = "" }: StorefrontSearchPageProps) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const results = normalizedQuery
+    ? products.filter((product) => `${product.title} ${product.category}`.toLowerCase().includes(normalizedQuery))
+    : products;
 
   return (
     <main className="bg-[rgb(var(--surface-base))]">
@@ -19,10 +20,10 @@ export function StorefrontSearchPage({ products, query = "product" }: Storefront
           <Badge>Search</Badge>
           <div className="space-y-2">
             <h1 className="font-serif text-4xl tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-              Results for &ldquo;{query}&rdquo;
+              {normalizedQuery ? `Results for “${query}”` : "Search catalog"}
             </h1>
             <p className="text-base leading-7 text-[rgb(var(--text-secondary))]">
-              {results.length} curated products matched your search across the local cargo-ready catalog.
+              {results.length} products found.
             </p>
           </div>
         </div>

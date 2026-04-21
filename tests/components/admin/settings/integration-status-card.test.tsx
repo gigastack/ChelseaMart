@@ -6,7 +6,7 @@ describe("IntegrationStatusCard", () => {
   it("shows status without exposing secret values", () => {
     render(
       <IntegrationStatusCard
-        lastSuccessAt="2026-04-17T10:00:00.000Z"
+        lastRecordedAt="2026-04-17T10:00:00.000Z"
         name="Paystack"
         status="configured"
       />,

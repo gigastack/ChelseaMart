@@ -20,22 +20,22 @@ export default async function AdminDashboardRoute() {
     <AdminDashboardPage
       overviewTiles={[
         {
-          description: "Orders waiting for warehouse receipt, measurement, or shipping invoice release.",
+          description: "Orders waiting for warehouse receipt, measurement, or shipping release.",
           title: "Warehouse queue",
           value: String(warehouseQueue),
         },
         {
-          description: "Customers who have paid for products and are waiting to settle a measured shipping invoice.",
+          description: "Customers waiting to pay a measured shipping invoice.",
           title: "Shipping invoices due",
           value: String(shippingInvoicesDue),
         },
         {
-          description: "Product and shipping revenue stay split so operations can reconcile both phases cleanly.",
+          description: "Product and shipping revenue stay separate for reconciliation.",
           title: "Split revenue",
           value: `NGN ${productRevenueNgn.toLocaleString("en-NG")} / ${shippingRevenueNgn.toLocaleString("en-NG")}`,
         },
         {
-          description: "Manual-upload products remain the main QA path while ELIM stays admin-only and quota-light.",
+          description: "Live and draft products currently in the catalog.",
           title: "Catalog posture",
           value: `${liveProducts} live / ${draftProducts} draft`,
         },

@@ -15,6 +15,9 @@ These rules apply to files under `app/(admin)/`.
 - Draft, live, removed, and unavailable product states must remain explicit in admin UI.
 - Imports, scans, and sync flows must expose recoverable errors and job progress.
 - BI views should prioritize drilldowns and filters over decorative charts.
+- Dashboard, BI, settings, imports, orders, and products must read real persisted data or real env/config state.
+- Do not keep fake health states, fake timestamps, seeded badges, or hardcoded summary values in admin UI.
+- If an admin capability is not wired yet, show a truthful disabled state or empty state instead of placeholder controls or operator theater.
 
 ## security and data handling
 

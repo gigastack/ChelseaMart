@@ -30,10 +30,6 @@ export function CurrencyPairsForm({ action, cnyToNgnRate, defaultMoq, usdToNgnRa
             Global default MOQ
             <Input defaultValue={String(defaultMoq)} inputMode="numeric" name="defaultMoq" />
           </label>
-          <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-            Catalog prices stay native in CNY. Logistics invoices stay native in USD. Customers still settle both
-            payments in Naira, and new or imported products inherit this default MOQ unless a product override exists.
-          </p>
           <Button type="submit">Save commerce settings</Button>
         </form>
       </CardContent>

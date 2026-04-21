@@ -4,7 +4,7 @@ import { StorefrontCurrencyProvider } from "@/components/storefront/currency-pro
 import { ProductCard } from "@/components/storefront/product-card";
 
 describe("ProductCard", () => {
-  it("shows the product price, MOQ, and route availability note", () => {
+  it("shows the product price, MOQ, and shipping-later cue", () => {
     render(
       <StorefrontCurrencyProvider>
         <ProductCard
@@ -32,6 +32,6 @@ describe("ProductCard", () => {
     expect(screen.getByText("Desk Lamp")).toBeInTheDocument();
     expect(screen.getByText("CN¥ 90.91")).toBeInTheDocument();
     expect(screen.getByText(/MOQ 2/i)).toBeInTheDocument();
-    expect(screen.getByText(/Air \+ Sea available/i)).toBeInTheDocument();
+    expect(screen.getByText(/Shipping billed later/i)).toBeInTheDocument();
   });
 });

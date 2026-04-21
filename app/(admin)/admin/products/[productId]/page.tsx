@@ -1,6 +1,7 @@
 import { ProductEditor } from "@/components/admin/product-editor";
 import { ProductPublishRail } from "@/components/admin/product-publish-rail";
 import { Badge } from "@/components/ui/badge";
+import { saveAdminProductAction } from "@/app/(admin)/admin/products/actions";
 import { findAdminProduct } from "@/lib/catalog/repository";
 import { getCommerceSettings } from "@/lib/settings/repository";
 
@@ -8,16 +9,32 @@ type ProductEditorPageProps = {
   params: Promise<{
     productId: string;
   }>;
+  searchParams?: Promise<{
+    error?: string;
+    updated?: string;
+  }>;
 };
 
-export default async function AdminProductEditorPage({ params }: ProductEditorPageProps) {
+export default async function AdminProductEditorPage({ params, searchParams }: ProductEditorPageProps) {
   const { productId } = await params;
+  const pageParams = (await (searchParams ?? Promise.resolve({}))) as { error?: string; updated?: string };
   const [product, settings] = await Promise.all([findAdminProduct(productId), getCommerceSettings()]);
   const isManual = product?.sourceType === "manual";
-  const weightMissing = !product?.weightKg;
+  const coverImageMissing = !product?.coverImageUrl;
+  const formId = "admin-product-editor-form";
 
   return (
     <section className="space-y-6">
+        {pageParams.updated === "1" ? (
+          <div className="rounded-[var(--radius-md)] border border-[rgba(var(--success),0.25)] bg-[rgba(var(--success),0.08)] px-4 py-3 text-sm text-[rgb(var(--text-primary))]">
+            Product saved.
+          </div>
+        ) : null}
+        {pageParams.error ? (
+          <div className="rounded-[var(--radius-md)] border border-[rgba(var(--danger),0.25)] bg-[rgba(var(--danger),0.08)] px-4 py-3 text-sm text-[rgb(var(--text-primary))]">
+            {pageParams.error}
+          </div>
+        ) : null}
         <div className="space-y-3">
           <Badge>Shared product editor</Badge>
           <div className="space-y-2">
@@ -25,35 +42,38 @@ export default async function AdminProductEditorPage({ params }: ProductEditorPa
               Product editor
             </h1>
             <p className="max-w-3xl text-base leading-7 text-[rgb(var(--text-secondary))]">
-              Manual and API-linked products converge here so the admin can set final price, MOQ, weight, and publish
-              readiness before anything reaches the storefront.
+              Update product details, prices, MOQ, and image before publishing.
             </p>
           </div>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
           <ProductEditor
+            action={saveAdminProductAction}
             defaultValues={{
+              basePriceCny: product?.sourcePriceCny ?? product?.priceCny ?? 0,
+              coverImageUrl: product?.coverImageUrl ?? null,
               cnyToNgnRate: settings.cnyToNgnRate,
               defaultMoq: settings.defaultMoq,
               effectiveMoq: product?.effectiveMoq ?? settings.defaultMoq,
               moqOverride: product?.moqOverride ?? null,
-              sellPriceCny: product?.priceCny ?? Number((68000 / settings.cnyToNgnRate).toFixed(2)),
-              shortDescription: `Draft editor for ${productId}`,
-              sourcePriceCny: product?.sourcePriceCny ?? product?.priceCny ?? Number((68000 / settings.cnyToNgnRate).toFixed(2)),
-              title: product?.title ?? "Product Image Sample",
-              weightKg: product?.weightKg ?? null,
+              sellPriceCny: product?.priceCny ?? 0,
+              shortDescription: product?.shortDescription ?? "",
+              title: product?.title ?? "",
             }}
+            formId={formId}
             mode={isManual ? "manual" : "api"}
+            productId={productId}
           />
           <ProductPublishRail
-            blockingIssues={weightMissing ? ["weight_required"] : []}
+            blockingIssues={coverImageMissing ? ["cover_image_required"] : []}
             effectiveMoq={product?.effectiveMoq ?? settings.defaultMoq}
+            formId={formId}
             moqOverride={product?.moqOverride ?? null}
-            priceCny={product?.priceCny ?? Number((68000 / settings.cnyToNgnRate).toFixed(2))}
-            priceNgn={product?.priceNgn ?? 68000}
+            priceCny={product?.priceCny ?? 0}
+            priceNgn={product?.priceNgn ?? 0}
             status={product?.status ?? "draft"}
-            title={product?.title ?? "Product Image Sample"}
+            title={product?.title ?? "Product"}
           />
         </div>
     </section>

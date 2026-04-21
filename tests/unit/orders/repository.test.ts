@@ -34,23 +34,22 @@ function createProductsClient() {
           return {
             eq() {
               return {
-                order() {
-                  return {
-                    limit: vi.fn().mockResolvedValue({
-                      data: [
-                        {
-                          cover_image_url: "/ProductImage.jpg",
-                          moq_override: null,
-                          sell_price_cny: 420,
-                          id: "prod-1",
-                          slug: "manual-product-image-item",
-                          title: "Product Image Sample",
-                          weight_kg: 1.4,
-                        },
-                      ],
-                      error: null,
-                    }),
-                  };
+                in() {
+                  return Promise.resolve({
+                    data: [
+                      {
+                        cover_image_url: "/ProductImage.jpg",
+                        moq_override: null,
+                        sell_price_cny: 420,
+                        id: "prod-1",
+                        slug: "manual-product-image-item",
+                        title: "Product Image Sample",
+                        volume_cbm: null,
+                        weight_kg: 1.4,
+                      },
+                    ],
+                    error: null,
+                  });
                 },
               };
             },
@@ -94,6 +93,33 @@ function createAdminOrdersClient() {
                       payment_reference: "demo-paystack-ref-1001",
                       payment_status: "paid",
                       product_payment_state: "paid",
+                      order_status_events: [
+                        {
+                          created_at: "2026-04-17T09:00:00.000Z",
+                          id: "event-1",
+                          note: "Customer accepted the selected shipping route terms.",
+                          order_id: "order-1",
+                          status: "route_selected",
+                        },
+                        {
+                      created_at: "2026-04-18T08:30:00.000Z",
+                      id: "event-2",
+                      note: "Customer notification sent for shipping payment.",
+                      order_id: "order-1",
+                      status: "awaiting_shipping_payment",
+                    },
+                  ],
+                      order_shipments: {
+                        customer_notified_at: "2026-04-18T08:30:00.000Z",
+                        id: "shipment-1",
+                        measured_at: "2026-04-18T08:15:00.000Z",
+                        measured_weight_kg: 1.65,
+                        measurement_basis: "weight_kg",
+                        shipping_cost_ngn: 26400,
+                        shipping_cost_usd: 16.5,
+                        weighing_proof_mime_type: "image/jpeg",
+                        weighing_proof_path: "/ProductImage.jpg",
+                      },
                       shipping_payment_state: "pending",
                       product_subtotal_ngn: 92000,
                       route: "air",
@@ -151,10 +177,11 @@ describe("orders repository", () => {
 
     const { listCheckoutCartItems } = await import("@/lib/orders/repository");
 
-    await expect(listCheckoutCartItems()).resolves.toEqual([
+    await expect(listCheckoutCartItems([{ productId: "prod-1", quantity: 2 }])).resolves.toEqual([
       expect.objectContaining({
         effectiveMoq: 1,
         productId: "prod-1",
+        quantity: 2,
         sellPriceCny: 420,
         title: "Product Image Sample",
         weightKg: 1.4,
@@ -170,7 +197,19 @@ describe("orders repository", () => {
     await expect(findAdminOrderById("order-1")).resolves.toMatchObject({
       id: "order-1",
       paymentStatus: "paid",
+      shipment: expect.objectContaining({
+        shippingCostUsd: 16.5,
+        weighingProofPath: "/ProductImage.jpg",
+      }),
       status: "awaiting_shipping_payment",
+      statusEvents: [
+        expect.objectContaining({
+          status: "route_selected",
+        }),
+        expect.objectContaining({
+          status: "awaiting_shipping_payment",
+        }),
+      ],
     });
   });
 

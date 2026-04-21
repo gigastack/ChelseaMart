@@ -23,11 +23,13 @@ export type StorefrontProductRecord = {
 };
 
 export type AdminCatalogProductRecord = {
+  coverImageUrl: string | null;
   effectiveMoq: number;
   id: string;
   moqOverride: number | null;
   priceCny: number;
   priceNgn: number;
+  shortDescription: string;
   sourceType: "api" | "manual";
   sourcePriceCny: number;
   status: "draft" | "live" | "removed" | "unavailable";
@@ -73,6 +75,7 @@ export async function listStorefrontProducts() {
       "id, slug, title, short_description, description, moq_override, weight_kg, sell_price_cny, cover_image_url, categories(name)",
     )
     .eq("status", "live")
+    .order("featured", { ascending: false })
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -94,21 +97,20 @@ export async function listStorefrontProducts() {
       category:
         product.categories && typeof product.categories === "object" && "name" in product.categories
           ? String(product.categories.name)
-          : "Manual Upload",
-      description: product.short_description ?? "Manual-upload product ready for customer browsing.",
+          : "Catalog",
+      description: product.short_description ?? "Available for product payment now. Shipping is billed later.",
       effectiveMoq,
       id: product.id,
       imageUrl: product.cover_image_url ?? "/ProductImage.jpg",
       longDescription:
-        product.description ??
-        "This manual-upload product is persisted in the local catalog and priced independently from live ELIM reads.",
+        product.description ?? product.short_description ?? "Ready to order from the local catalog.",
       moq: effectiveMoq,
       priceDisplay: formatMoney(sellPriceCny, "CNY"),
       priceDisplayNgn: formatMoney(sellPriceNgn, "NGN"),
       sellPriceCny,
       sellPriceNgn,
       slug: product.slug,
-      specs: ["Manual upload", "Local catalog", "CNY display / NGN payment"],
+      specs: ["MOQ visible", "Shipping billed later"],
       title: product.title,
       weightKg: asNumber(product.weight_kg),
     } satisfies StorefrontProductRecord;
@@ -128,7 +130,7 @@ export async function listAdminProducts() {
   const settings = await getCommerceSettings();
   const { data, error } = await supabase
     .from("products")
-    .select("id, title, base_price_cny, moq_override, sell_price_cny, source_type, status, updated_at, weight_kg")
+    .select("id, title, short_description, cover_image_url, base_price_cny, moq_override, sell_price_cny, source_type, status, updated_at, weight_kg")
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -139,6 +141,7 @@ export async function listAdminProducts() {
     const priceCny = asNumber(product.sell_price_cny);
 
     return {
+      coverImageUrl: typeof product.cover_image_url === "string" ? product.cover_image_url : null,
       effectiveMoq: resolveEffectiveMoq({
         defaultMoq: settings.defaultMoq,
         moqOverride: asNullableNumber(product.moq_override),
@@ -150,6 +153,7 @@ export async function listAdminProducts() {
         cnyToNgnRate: settings.cnyToNgnRate,
         sourcePriceCny: priceCny,
       }),
+      shortDescription: product.short_description ?? "",
       sourceType: product.source_type,
       sourcePriceCny: asNumber(product.base_price_cny),
       status: product.status,

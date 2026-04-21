@@ -34,12 +34,9 @@ export function StorefrontFooter() {
         <div className="space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/56">Chelsea Mart</p>
-            <h2 className="text-3xl font-semibold tracking-[-0.05em] text-white">Buy products now. Settle shipping after warehouse proof.</h2>
+            <h2 className="text-3xl font-semibold tracking-[-0.05em] text-white">Products first. Shipping later.</h2>
           </div>
-          <p className="max-w-xl text-sm leading-7 text-white/74">
-            CNY-first merchandising, NGN product settlement, USD logistics invoices, and customer-visible proof before the
-            second payment opens.
-          </p>
+          <p className="max-w-xl text-sm leading-7 text-white/74">Browse the catalog, keep MOQ visible, and track orders from your account.</p>
         </div>
 
         {footerColumns.map((column) => (
@@ -60,12 +57,8 @@ export function StorefrontFooter() {
         ))}
 
         <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/50">Logistics explainer</p>
-          <div className="space-y-3 text-sm leading-7 text-white/72">
-            <p>1. Browse products in CNY and pick a route before product payment.</p>
-            <p>2. Warehouse receipt, measurement, and proof establish the shipping invoice later.</p>
-            <p>3. Product and shipping payments stay split all the way through delivery.</p>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/50">Support</p>
+          <p className="text-sm leading-7 text-white/72">Need an update on an order? Open the service center from your account.</p>
         </div>
       </div>
     </footer>

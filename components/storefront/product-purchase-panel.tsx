@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { AddToCartForm } from "@/components/storefront/add-to-cart-form";
 import { useStorefrontCurrency } from "@/components/storefront/currency-provider";
 import type { StorefrontProductRecord } from "@/lib/catalog/repository";
 import { cn } from "@/lib/utils";
@@ -80,15 +81,15 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           </div>
           <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">
-              Base weight
+              Payment
             </p>
-            <p className="mt-2 text-xl font-semibold text-[rgb(var(--text-primary))]">{product.weightKg} KG</p>
+            <p className="mt-2 text-xl font-semibold text-[rgb(var(--text-primary))]">NGN at checkout</p>
           </div>
           <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">
-              Route posture
+              Shipping
             </p>
-            <p className="mt-2 text-xl font-semibold text-[rgb(var(--text-primary))]">Air + Sea</p>
+            <p className="mt-2 text-xl font-semibold text-[rgb(var(--text-primary))]">Billed later</p>
           </div>
         </div>
 
@@ -115,9 +116,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </div>
 
         <div className="grid gap-3">
-          <Link className={cn(buttonVariants({ size: "lg" }), "w-full")} href="/cart" role="button">
-            Add to cart
-          </Link>
+          <AddToCartForm effectiveMoq={product.effectiveMoq} productId={product.id} />
           <Link className={cn(buttonVariants({ size: "lg" }), "w-full")} href="/checkout">
             Continue to checkout
           </Link>

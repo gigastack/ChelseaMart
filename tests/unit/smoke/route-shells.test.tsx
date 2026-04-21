@@ -33,8 +33,8 @@ describe("route shells", () => {
       </StorefrontCurrencyProvider>,
     );
 
-    expect(screen.getByRole("heading", { name: /curated product buying with the logistics truth/i })).toBeVisible();
-    expect(screen.getByRole("link", { name: /enter catalog/i })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /source products in cny\. pay in naira\. handle shipping later\./i })).toBeVisible();
+    expect(screen.getByRole("link", { name: /shop catalog/i })).toBeVisible();
     expect(screen.queryByRole("link", { name: /open admin/i })).not.toBeInTheDocument();
   });
 
@@ -43,15 +43,15 @@ describe("route shells", () => {
       <AdminDashboardPage
         overviewTiles={[
           {
-            description: "Imports, catalog health, and orders are surfaced here before deeper BI and workflow pages land.",
-            title: "Operations control room",
+            description: "Orders, catalog, and payments are surfaced here.",
+            title: "Warehouse queue",
             value: "1",
           },
         ]}
       />,
     );
 
-    expect(screen.getByRole("heading", { name: /operations control room/i })).toBeVisible();
-    expect(screen.getByText(/imports, catalog health, and orders/i)).toBeVisible();
+    expect(screen.getByRole("heading", { name: /see what needs action\./i })).toBeVisible();
+    expect(screen.getByText(/orders, catalog, and payments are surfaced here/i)).toBeVisible();
   });
 });

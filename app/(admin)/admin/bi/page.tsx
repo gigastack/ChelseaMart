@@ -5,10 +5,27 @@ import { BiSalesChart } from "@/components/admin/bi-sales-chart";
 import { Badge } from "@/components/ui/badge";
 import { getBiDashboard } from "@/lib/bi/get-bi-dashboard";
 
-export default async function AdminBiPage() {
+type AdminBiPageProps = {
+  searchParams?: Promise<{
+    from?: string;
+    to?: string;
+  }>;
+};
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export default async function AdminBiPage({ searchParams }: AdminBiPageProps) {
+  const today = new Date();
+  const defaultFrom = new Date(today);
+  defaultFrom.setDate(today.getDate() - 29);
+  const params = (await (searchParams ?? Promise.resolve({}))) as { from?: string; to?: string };
+  const from = typeof params.from === "string" && params.from ? params.from : formatDateInput(defaultFrom);
+  const to = typeof params.to === "string" && params.to ? params.to : formatDateInput(today);
   const dashboard = await getBiDashboard({
-    from: "2026-01-01",
-    to: "2026-01-31",
+    from,
+    to,
   });
   const averageOrderValue =
     dashboard.executive.totalOrders === 0
@@ -25,19 +42,14 @@ export default async function AdminBiPage() {
         <div className="space-y-3">
           <Badge>BI suite</Badge>
           <div className="space-y-3">
-            <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-              Business intelligence
-            </h1>
+            <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">Business insights</h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              Revenue, warehouse velocity, and catalog performance should sit beside finance and ops in the same frame
-              so the split-ledger model stays legible without exporting raw tables first.
+              Review revenue, payments, and warehouse workload for the selected date range.
             </p>
           </div>
         </div>
         <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-5">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">
-            Decision notes
-          </p>
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Summary</p>
           <div className="grid gap-3 text-sm leading-6 text-[rgb(var(--text-secondary))]">
             <p>Average order value is NGN {averageOrderValue.toLocaleString("en-NG")} in the active window.</p>
             <p>Shipping contributes {shippingMix}% of recognized revenue once the second payment clears.</p>
@@ -107,18 +119,18 @@ export default async function AdminBiPage() {
           <div className="space-y-2">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Ops and catalog context</p>
             <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-              Read finance beside execution signals.
+              Read finance beside execution.
             </h2>
           </div>
           <div className="grid gap-3 text-sm leading-6 text-[rgb(var(--text-secondary))]">
             <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4">
-              <p className="font-medium text-[rgb(var(--text-primary))]">Air vs sea remains balanced.</p>
+              <p className="font-medium text-[rgb(var(--text-primary))]">Route mix</p>
               <p className="mt-2">
                 Air orders: {dashboard.sales.routeSplit.air}. Sea orders: {dashboard.sales.routeSplit.sea}.
               </p>
             </div>
             <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4">
-              <p className="font-medium text-[rgb(var(--text-primary))]">Catalog risk is currently low.</p>
+              <p className="font-medium text-[rgb(var(--text-primary))]">Unavailable products</p>
               <p className="mt-2">{dashboard.catalog.unavailable} products are currently unavailable after admin scans.</p>
             </div>
           </div>

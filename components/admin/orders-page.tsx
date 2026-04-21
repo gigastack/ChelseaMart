@@ -54,11 +54,10 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
           <Badge>Orders</Badge>
           <div className="space-y-3">
             <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-              Warehouse and delivery queue with both ledgers visible at once.
+              Track warehouse, shipping, and delivery in one queue.
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              Ops should be able to see which orders still need measurement, which invoices are due, and which second
-              payments are blocking transit without opening each record first.
+              Review the current stage, what is waiting on the customer, and what the team needs to do next.
             </p>
           </div>
         </div>
@@ -68,13 +67,13 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
             className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] px-4 py-3 text-sm font-medium text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]"
             href="/admin/settings"
           >
-            Review exchange rates and default MOQ
+            Review settings
           </Link>
           <Link
             className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] px-4 py-3 text-sm font-medium text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]"
             href="/admin/bi"
           >
-            Open BI and payment funnel
+            Open insights
           </Link>
         </div>
       </div>
@@ -94,11 +93,11 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
 
       <section className="rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))]">
         <div className="grid gap-2 border-b border-[rgba(var(--border-subtle),0.92)] px-6 py-5">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Order ledger</p>
-          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-            Product, warehouse, and logistics states in one queue.
-          </h2>
-        </div>
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Order ledger</p>
+            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
+              Review each order and open the next action.
+            </h2>
+          </div>
 
         <div className="px-6 py-5">
           <DataTable>
@@ -110,6 +109,7 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
                 <DataTableHead>Product payment</DataTableHead>
                 <DataTableHead>Logistics invoice</DataTableHead>
                 <DataTableHead>Shipping payment</DataTableHead>
+                <DataTableHead>Next step</DataTableHead>
                 <DataTableHead>Created</DataTableHead>
               </DataTableRow>
             </DataTableHeader>
@@ -140,6 +140,23 @@ export function AdminOrdersPage({ orders }: AdminOrdersPageProps) {
                     )}
                   </DataTableCell>
                   <DataTableCell>{formatStatusLabel(order.shippingPaymentState)}</DataTableCell>
+                  <DataTableCell>
+                    {order.status === "awaiting_warehouse"
+                      ? "Confirm arrival"
+                      : order.status === "arrived_at_warehouse"
+                        ? "Record measurement"
+                        : order.status === "awaiting_shipping_payment"
+                          ? "Wait for payment"
+                          : order.status === "shipping_paid"
+                            ? "Start transit"
+                            : order.status === "in_transit"
+                              ? "Await destination arrival"
+                              : order.status === "arrived_destination"
+                                ? "Mark out for delivery"
+                                : order.status === "out_for_delivery"
+                                  ? "Mark delivered"
+                                  : "Review details"}
+                  </DataTableCell>
                   <DataTableCell>{order.createdLabel}</DataTableCell>
                 </DataTableRow>
               ))}

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 type ProductPublishRailProps = {
   blockingIssues: string[];
   effectiveMoq: number;
+  formId: string;
   moqOverride: number | null;
   priceCny: number;
   priceNgn: number;
@@ -27,14 +28,13 @@ function formatCny(value: number) {
 export function ProductPublishRail({
   blockingIssues,
   effectiveMoq,
+  formId,
   moqOverride,
   priceCny,
   priceNgn,
   status,
   title,
 }: ProductPublishRailProps) {
-  const readyToPublish = blockingIssues.length === 0;
-
   return (
     <Card className="sticky top-6 border-none bg-[linear-gradient(180deg,rgba(var(--surface-card),0.98)_0%,rgba(var(--surface-alt),0.94)_100%)]">
       <CardHeader>
@@ -64,8 +64,12 @@ export function ProductPublishRail({
           )}
         </div>
         <div className="flex gap-3">
-          <Button disabled={!readyToPublish}>Publish product</Button>
-          <Button variant="secondary">Save draft</Button>
+          <Button form={formId} name="intent" type="submit" value="live">
+            Publish product
+          </Button>
+          <Button form={formId} name="intent" type="submit" value="draft" variant="secondary">
+            Save draft
+          </Button>
         </div>
       </CardContent>
     </Card>

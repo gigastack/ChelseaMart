@@ -2,12 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type IntegrationStatusCardProps = {
-  lastSuccessAt?: string;
+  lastRecordedAt?: string | null;
   name: string;
   status: "configured" | "invalid" | "missing";
 };
 
-export function IntegrationStatusCard({ lastSuccessAt, name, status }: IntegrationStatusCardProps) {
+export function IntegrationStatusCard({ lastRecordedAt, name, status }: IntegrationStatusCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -17,7 +17,9 @@ export function IntegrationStatusCard({ lastSuccessAt, name, status }: Integrati
       <CardContent className="space-y-3">
         <Badge>{status}</Badge>
         <p className="text-sm text-[rgb(var(--text-secondary))]">
-          {lastSuccessAt ? `Last success: ${new Date(lastSuccessAt).toLocaleString("en-NG")}` : "No successful events recorded yet."}
+          {lastRecordedAt
+            ? `Last recorded activity: ${new Date(lastRecordedAt).toLocaleString("en-NG")}`
+            : "No recorded activity yet."}
         </p>
       </CardContent>
     </Card>

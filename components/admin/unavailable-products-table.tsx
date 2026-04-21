@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { DataTable, DataTableBody, DataTableCell, DataTableHead, DataTableHeader, DataTableRow } from "@/components/ui/table";
 
 export type UnavailableProductRow = {
@@ -22,7 +21,7 @@ export function UnavailableProductsTable({ products }: UnavailableProductsTableP
           <DataTableHead>Source ID</DataTableHead>
           <DataTableHead>Previous state</DataTableHead>
           <DataTableHead>Unavailable since</DataTableHead>
-          <DataTableHead>Actions</DataTableHead>
+          <DataTableHead>Recovery</DataTableHead>
         </DataTableRow>
       </DataTableHeader>
       <DataTableBody>
@@ -32,19 +31,7 @@ export function UnavailableProductsTable({ products }: UnavailableProductsTableP
             <DataTableCell>{product.sourceProductId}</DataTableCell>
             <DataTableCell>{product.statusBeforeHide}</DataTableCell>
             <DataTableCell>{product.unavailableSince}</DataTableCell>
-            <DataTableCell>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="secondary">
-                  Retry
-                </Button>
-                <Button size="sm" variant="secondary">
-                  Keep hidden
-                </Button>
-                <Button size="sm" variant="danger">
-                  Delete
-                </Button>
-              </div>
-            </DataTableCell>
+            <DataTableCell>No action from this screen yet.</DataTableCell>
           </DataTableRow>
         ))}
       </DataTableBody>

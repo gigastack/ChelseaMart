@@ -32,8 +32,7 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
               {order.id}
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              This record keeps the full two-phase ledger in view: accepted route snapshot, CNY product reference, USD
-              logistics invoice, proof asset, and the actions that move the order through warehouse and delivery.
+              Review payments, shipping status, and the next warehouse or delivery action.
             </p>
           </div>
         </div>
@@ -59,10 +58,10 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
           <section className="rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-3">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Settlement ledger</p>
-                <p className="text-3xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-                  {formatMoney(order.grandTotalNgn, "NGN")}
-                </p>
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Settlement ledger</p>
+              <p className="text-3xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
+                {formatMoney(order.grandTotalNgn, "NGN")}
+              </p>
                 <div className="grid gap-2 text-sm text-[rgb(var(--text-secondary))]">
                   <p>Product subtotal: {formatMoney(order.productSubtotalCny, "CNY")}</p>
                   <p>Product settlement: {formatMoney(order.productPaymentTotalNgn, "NGN")}</p>
@@ -144,7 +143,7 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
           {order.status === "awaiting_warehouse" ? (
             <section className="rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Warehouse arrival</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Confirm items reached the warehouse.</h2>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Step 1: confirm the items reached the warehouse.</h2>
               <form action={markOrderArrivedAtWarehouseAction} className="mt-4">
                 <input name="orderId" type="hidden" value={order.id} />
                 <Button type="submit">Mark arrived at warehouse</Button>
@@ -157,7 +156,7 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
               <div className="space-y-2">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Warehouse measurement</p>
                 <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-                  Record shipment size, proof, and invoice trigger.
+                  Step 2: record shipment size and upload proof.
                 </h2>
               </div>
               <form action={recordWarehouseMeasurementAction} className="mt-4 grid gap-4">
@@ -184,8 +183,7 @@ export function AdminOrderDetailPage({ consignee, order }: AdminOrderDetailPageP
                   />
                 </label>
                 <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-                  Saving this form uploads proof, snapshots the warehouse measurement, and creates the USD logistics
-                  invoice the customer will later settle in NGN.
+                  This creates the shipping invoice the customer will see next.
                 </p>
                 <Button type="submit">Generate shipping invoice</Button>
               </form>

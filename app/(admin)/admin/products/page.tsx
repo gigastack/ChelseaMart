@@ -16,7 +16,7 @@ export default async function AdminProductsPage() {
   const manualCount = demoProducts.filter((product) => product.sourceType === "manual").length;
   const apiCount = demoProducts.filter((product) => product.sourceType === "api").length;
   const overrideCount = demoProducts.filter((product) => product.moqOverride !== null).length;
-  const missingWeightCount = demoProducts.filter((product) => product.weightKg === null).length;
+  const missingImageCount = demoProducts.filter((product) => product.coverImageUrl === null).length;
 
   return (
     <section className="space-y-8">
@@ -26,11 +26,10 @@ export default async function AdminProductsPage() {
           <Badge>Catalog control</Badge>
           <div className="space-y-3">
             <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-              Catalog control
+              Products
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              Merchandising posture, publish readiness, and source truth should stay visible in one product hub before
-              anything hits the storefront.
+              Create, edit, and publish products from one place.
             </p>
           </div>
         </div>
@@ -68,16 +67,16 @@ export default async function AdminProductsPage() {
           <article className="grid gap-4 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
             <div className="space-y-2">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Publish readiness</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">What still blocks catalog release.</h2>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">What still needs attention.</h2>
             </div>
             <div className="grid gap-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
               <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4">
-                <p className="font-medium text-[rgb(var(--text-primary))]">{missingWeightCount} products missing logistics weight.</p>
-                <p className="mt-2">Products without a weight profile remain draft-safe until a merchandiser resolves shipping readiness.</p>
+                <p className="font-medium text-[rgb(var(--text-primary))]">{missingImageCount} products missing a cover image.</p>
+                <p className="mt-2">Products should have an image before they go live.</p>
               </div>
               <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] p-4">
                 <p className="font-medium text-[rgb(var(--text-primary))]">{overrideCount} products use a product-level MOQ override.</p>
-                <p className="mt-2">All remaining rows inherit the global default MOQ from settings and still enforce it at cart and checkout.</p>
+                <p className="mt-2">All other products inherit the global default from settings.</p>
               </div>
             </div>
           </article>
@@ -85,7 +84,7 @@ export default async function AdminProductsPage() {
           <article className="grid gap-4 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
             <div className="space-y-2">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Source posture</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Manual and API stock stay in one catalog frame.</h2>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Manual and API products stay in one catalog.</h2>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
               <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-4 py-3">
@@ -97,10 +96,7 @@ export default async function AdminProductsPage() {
                 <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{apiCount}</p>
               </div>
             </div>
-            <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-              CNY remains the catalog source of truth while NGN remains the checkout settlement preview. Source-linked
-              rows should stay reviewable instead of silently mutating live content.
-            </p>
+            <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">Manual products are created locally. API-linked products keep source metadata for review.</p>
           </article>
         </div>
       </section>

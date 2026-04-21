@@ -10,7 +10,7 @@ export function ConsigneeForm() {
     >
       <div className="space-y-2">
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Add consignee</p>
-        <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Create a recipient record for the next routed order.</h2>
+        <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Add a new recipient.</h2>
       </div>
 
       <label className="grid gap-2 text-sm font-medium text-[rgb(var(--text-primary))]">

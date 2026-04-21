@@ -250,11 +250,12 @@ Replace the current semi-placeholder dashboard with an actual control room:
 
 ## Implementation Constraints
 
-- No backend or schema changes in this phase
-- No route changes in this phase
-- No payment provider changes in this phase
-- No webhook contract changes in this phase
-- No change to current order lifecycle semantics in this phase
+- Route paths remain stable in this phase
+- Payment provider and webhook contracts remain stable in this phase
+- Current two-phase order lifecycle semantics remain stable in this phase
+- Functional completion is allowed where the redesign still ships prototype behavior, fake data, or incomplete product workflows
+- User-visible metrics, summaries, hero selections, settings values, BI outputs, and status panels must come from persisted records or real config/env state
+- If a feature is not implemented, the UI must show a truthful disabled state or empty state rather than decorative placeholder controls
 - No image-generation or media-sourcing pass in this phase unless separately approved
 
 ## Acceptance Criteria

@@ -43,23 +43,18 @@ export default async function AdminImportsPage() {
         <div className="space-y-3">
           <Badge>Imports and availability</Badge>
           <div className="space-y-3">
-            <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
-              Import engine
-            </h1>
+            <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">Imports</h1>
             <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
-              Batch jobs, logs, and ELIM visibility should stay in one shell so operators can detect duplicates, review
-              drafts, and quarantine failed rows without leaving the queue.
+              Review recorded job history, failures, duplicates, and unavailable products.
             </p>
           </div>
         </div>
 
         <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-5">
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">
-            Operator notes
-          </p>
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Current scope</p>
           <div className="grid gap-3 text-sm leading-6 text-[rgb(var(--text-secondary))]">
-            <p>Every import remains draft-first. Publishing still requires a separate catalog pass with MOQ and logistics readiness intact.</p>
-            <p>Technical logs remain mono-styled so source parsing and dedupe errors can be diagnosed inline.</p>
+            <p>Recorded import jobs and logs are live.</p>
+            <p>Running new imports from this screen is not enabled yet.</p>
           </div>
         </div>
       </div>

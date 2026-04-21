@@ -29,11 +29,29 @@ type OrderStatusPanelProps = {
 };
 
 export function OrderStatusPanel({ orderId, status }: OrderStatusPanelProps) {
+  const stageLabel =
+    status === "awaiting_warehouse"
+      ? "Step 1: confirm warehouse arrival"
+      : status === "arrived_at_warehouse"
+        ? "Step 2: record measurement and proof"
+        : status === "awaiting_shipping_payment"
+          ? "Step 3: wait for the customer to pay shipping"
+          : status === "shipping_paid"
+            ? "Step 4: start transit"
+            : status === "in_transit"
+              ? "Step 5: wait for destination arrival"
+              : status === "arrived_destination"
+                ? "Step 6: mark out for delivery"
+                : status === "out_for_delivery"
+                  ? "Step 7: complete delivery"
+                  : "Current order stage";
+
   return (
     <div className="space-y-4 rounded-[var(--radius-lg)] border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] p-6">
       <div className="space-y-2">
-        <Badge>Order status</Badge>
+        <Badge>Next action</Badge>
         <p className="text-2xl font-semibold capitalize text-[rgb(var(--text-primary))]">{formatStatusLabel(status)}</p>
+        <p className="text-sm text-[rgb(var(--text-secondary))]">{stageLabel}</p>
       </div>
       <div className="flex flex-wrap gap-3">
         {nextStatusLabels[status].map((label) => (

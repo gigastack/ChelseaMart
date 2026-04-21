@@ -24,6 +24,9 @@ These rules apply to files under `app/(storefront)/`.
 - Checkout must clearly separate buyer identity, consignee selection, route choice, and order review.
 - MOQ must be clearly visible anywhere quantity can be changed, and quantities below the effective MOQ must be blocked.
 - Customer order tracking is status-driven. Do not imply carrier-grade live tracking when it does not exist.
+- Customer-facing pages must not expose design rationale, technical implementation notes, seeded-demo language, or internal catalog terminology.
+- Click targets must be visually obvious.
+- Cart behavior must support continued shopping rather than forcing an immediate route to checkout flow.
 
 ## implementation
 

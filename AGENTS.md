@@ -52,6 +52,9 @@ Planned nested placement once the app exists:
 - Put pricing, currency, import normalization, payment handling, and order snapshot logic into dedicated server-side modules.
 - Access environment variables through a typed config layer rather than scattering `process.env` reads everywhere.
 - Validate all external API payloads and form inputs before using them.
+- All user-visible product, dashboard, BI, settings, order, and storefront merchandising data must be backed by persistent database records or real config/env state.
+- Do not ship hardcoded KPI values, placeholder counts, fake timestamps, seeded labels, or decorative production summaries.
+- If representative UI data is needed for QA, seed it into the database and read it through the same repository/query path used by production.
 - Once the hosted commerce schema is live, do not keep in-memory compatibility fallbacks in normal runtime paths. Fail clearly or block the workflow with actionable guidance.
 - Persist snapshot values used for orders so later settings changes do not rewrite historical totals.
 - Persist both native-currency and settlement-currency snapshots for product payment and shipping payment.
@@ -77,6 +80,7 @@ Planned nested placement once the app exists:
 - `GSAP` is not the default. Use it only for isolated art-direction cases that Motion cannot express cleanly.
 - Use reduced-motion aware transitions. Motion should make state feel continuous, not dramatic.
 - Design loading, empty, success, and error states for every major screen.
+- If a feature is not implemented, the UI must show a truthful disabled state, empty state, or blocked workflow message instead of decorative controls or fake working behavior.
 - Keep mobile first-class on storefront and acceptable for core admin tasks.
 
 ## security and config

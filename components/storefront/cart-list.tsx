@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { removeCartItemAction, updateCartItemQuantityAction } from "@/app/(storefront)/cart/actions";
+import { Button } from "@/components/ui/button";
 import type { CartItemRecord } from "@/lib/orders/repository";
 
 type CartListProps = {
@@ -33,7 +35,7 @@ export function CartList({ items }: CartListProps) {
                 <div className="flex flex-wrap gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">
                   <span className="rounded-full border border-[rgba(var(--border-subtle),0.92)] px-3 py-1">MOQ {item.effectiveMoq}</span>
                   <span className="rounded-full border border-[rgba(var(--border-subtle),0.92)] px-3 py-1">Qty {item.quantity}</span>
-                  <span className="rounded-full border border-[rgba(var(--border-subtle),0.92)] px-3 py-1">Air + Sea</span>
+                  <span className="rounded-full border border-[rgba(var(--border-subtle),0.92)] px-3 py-1">Shipping billed later</span>
                 </div>
               </div>
 
@@ -52,16 +54,38 @@ export function CartList({ items }: CartListProps) {
                 <p className="text-sm text-[rgb(var(--text-secondary))]">{item.priceDisplayNgn} at checkout</p>
               </div>
               <div>
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">MOQ enforcement</p>
-                <p className="mt-2 text-sm text-[rgb(var(--text-secondary))]">
-                  This cart line is prefilled at the effective MOQ so checkout never starts below the minimum.
-                </p>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Update quantity</p>
+                <form action={updateCartItemQuantityAction} className="mt-2 grid gap-2">
+                  <input name="productId" type="hidden" value={item.productId} />
+                  <input
+                    className="min-h-11 rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-base))] px-4 text-sm text-[rgb(var(--text-primary))]"
+                    defaultValue={item.quantity}
+                    min={item.effectiveMoq}
+                    name="quantity"
+                    step={1}
+                    type="number"
+                  />
+                  <Button size="sm" type="submit" variant="secondary">
+                    Save quantity
+                  </Button>
+                </form>
               </div>
               <div>
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Shipping posture</p>
-                <p className="mt-2 text-sm text-[rgb(var(--text-secondary))]">
-                  No logistics charge is included here. Route acceptance happens next, and shipping opens only after warehouse proof.
-                </p>
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">Line actions</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <form action={removeCartItemAction}>
+                    <input name="productId" type="hidden" value={item.productId} />
+                    <Button size="sm" type="submit" variant="ghost">
+                      Remove
+                    </Button>
+                  </form>
+                  <Link
+                    className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-3 text-sm font-medium text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]"
+                    href={`/products/${item.slug}`}
+                  >
+                    View product
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
