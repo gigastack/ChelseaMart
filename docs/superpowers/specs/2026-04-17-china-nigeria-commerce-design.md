@@ -1,3 +1,5 @@
+> Superseded: this earlier product/design spec has been replaced for UI implementation by `docs/superpowers/specs/2026-04-21-canonical-ui-redesign.md`. Keep this file as historical product context only.
+
 # China-Nigeria Commerce Platform Design
 
 ## Summary

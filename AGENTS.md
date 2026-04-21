@@ -93,4 +93,4 @@ Planned nested placement once the app exists:
 
 ## reference
 
-- Product/design spec: `docs/superpowers/specs/2026-04-17-china-nigeria-commerce-design.md`
+- Product/design spec: `docs/superpowers/specs/2026-04-21-canonical-ui-redesign.md`
