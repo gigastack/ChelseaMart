@@ -2,13 +2,10 @@ import { redirect } from "next/navigation";
 import { assertAdminRole } from "@/lib/auth/access";
 import { getUserAccessFromUser } from "@/lib/auth/profiles";
 import { buildSignInHref } from "@/lib/auth/redirects";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseUserOrNull } from "@/lib/auth/supabase-user";
 
 export async function requireAuthenticatedUser(nextPath = "/account/orders") {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSupabaseUserOrNull();
 
   if (!user?.email) {
     redirect(buildSignInHref(nextPath));

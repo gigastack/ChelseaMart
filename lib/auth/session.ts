@@ -1,7 +1,7 @@
 import { getUserAccess, type UserAccess } from "@/lib/auth/access";
 import { getUserAccessFromUser } from "@/lib/auth/profiles";
+import { getSupabaseUserOrNull } from "@/lib/auth/supabase-user";
 import { hasSupabaseAuthEnv } from "@/lib/config/env";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type SessionUserAccess = UserAccess & {
   user:
@@ -25,10 +25,7 @@ export async function getCurrentUserAccess(): Promise<SessionUserAccess> {
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSupabaseUserOrNull();
   const access = await getUserAccessFromUser(user);
 
   return {
