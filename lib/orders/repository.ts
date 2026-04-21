@@ -396,7 +396,10 @@ export async function listCheckoutCartItems() {
       "NGN",
     ),
     productId: product.id,
-    quantity: 1,
+    quantity: resolveEffectiveMoq({
+      defaultMoq: settings.defaultMoq,
+      moqOverride: asNullableNumber(product.moq_override),
+    }),
     sellPriceCny: asNumber(product.sell_price_cny ?? 0),
     sellPriceNgn: convertCnyToNgn({
       cnyToNgnRate: settings.cnyToNgnRate,

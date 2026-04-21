@@ -17,30 +17,39 @@ export function CheckoutRouteSelector({ onRouteChange, routeId, routes }: Checko
           aria-pressed={routeId === route.id}
           key={route.id}
           className={cn(
-            "rounded-[var(--radius-lg)] border p-5 text-left transition-colors",
+            "grid gap-4 rounded-[var(--radius-lg)] border p-5 text-left transition-colors",
             routeId === route.id
-              ? "border-[rgb(var(--brand-600))] bg-[rgba(var(--brand-600),0.08)]"
-              : "border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))]",
+              ? "border-[rgb(var(--brand-600))] bg-[rgba(var(--brand-500),0.08)]"
+              : "border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))]",
           )}
           onClick={() => onRouteChange(route.id)}
           type="button"
         >
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[rgb(var(--text-secondary))]">
+            <div className="space-y-2">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">
                 {route.mode}
               </p>
-              <p className="mt-2 text-lg font-semibold text-[rgb(var(--text-primary))]">{route.title}</p>
+              <p className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">{route.title}</p>
             </div>
-            <p className="text-sm text-[rgb(var(--text-secondary))]">
+            <span className="rounded-full border border-[rgba(var(--border-subtle),0.92)] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[rgb(var(--text-secondary))]">
               {route.etaDaysMin}-{route.etaDaysMax} days
+            </span>
+          </div>
+
+          <div className="grid gap-2 text-sm text-[rgb(var(--text-secondary))]">
+            <p>
+              {route.originLabel} to {route.destinationLabel}
+            </p>
+            <p className="font-medium text-[rgb(var(--text-primary))]">{route.formulaLabel}</p>
+          </div>
+
+          <div className="grid gap-3 border-t border-[rgba(var(--border-subtle),0.92)] pt-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
+            <p>{route.termsSummary}</p>
+            <p>
+              Shipping is not charged here. This route only establishes how warehouse measurement will later produce the logistics invoice.
             </p>
           </div>
-          <p className="mt-2 text-sm text-[rgb(var(--text-secondary))]">
-            {route.originLabel} to {route.destinationLabel}
-          </p>
-          <p className="mt-4 text-sm font-medium text-[rgb(var(--text-primary))]">{route.formulaLabel}</p>
-          <p className="mt-2 text-sm leading-6 text-[rgb(var(--text-secondary))]">{route.termsSummary}</p>
         </button>
       ))}
     </div>

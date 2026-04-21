@@ -1,5 +1,3 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
 type CheckoutSummaryProps = {
   summary: {
     cnyToNgnRate: number;
@@ -21,37 +19,48 @@ function formatNgn(value: number) {
 
 export function CheckoutSummary({ summary }: CheckoutSummaryProps) {
   return (
-    <Card className="border-none bg-[linear-gradient(180deg,rgba(var(--surface-card),0.94)_0%,rgba(var(--surface-alt),0.9)_100%)] shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-      <CardHeader>
-        <CardDescription>Checkout summary</CardDescription>
-        <CardTitle>Pay now in {summary.currency}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between text-sm text-[rgb(var(--text-secondary))]">
-          <span>Product subtotal</span>
-          <span>{formatNgn(summary.productSubtotalNgn)}</span>
+    <section className="rounded-[var(--radius-lg)] border border-[rgba(var(--border-strong),0.46)] bg-[rgba(var(--surface-card),0.96)] p-6 shadow-[0_24px_70px_rgba(4,47,46,0.08)] backdrop-blur xl:sticky xl:top-[calc(var(--header-height)+2rem)]">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">3. Review and pay</p>
+          <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Products now, shipping later</h2>
+          <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
+            This rail makes the split explicit so no one mistakes the first charge for a landed total.
+          </p>
         </div>
-        <div className="flex items-center justify-between text-sm text-[rgb(var(--text-secondary))]">
-          <span>CNY reference</span>
-          <span>{formatCny(summary.productSubtotalCny)}</span>
+
+        <div className="grid gap-3 border-y border-[rgba(var(--border-subtle),0.92)] py-4 text-sm">
+          <div className="flex items-center justify-between gap-4 text-[rgb(var(--text-secondary))]">
+            <span>Product subtotal</span>
+            <span className="font-medium text-[rgb(var(--text-primary))]">{formatNgn(summary.productSubtotalNgn)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 text-[rgb(var(--text-secondary))]">
+            <span>CNY reference</span>
+            <span className="font-medium text-[rgb(var(--text-primary))]">{formatCny(summary.productSubtotalCny)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 text-[rgb(var(--text-secondary))]">
+            <span>CNY to NGN rate</span>
+            <span className="font-medium text-[rgb(var(--text-primary))]">{summary.cnyToNgnRate.toLocaleString("en-NG")}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 text-[rgb(var(--text-secondary))]">
+            <span>Marketplace service fee</span>
+            <span className="font-medium text-[rgb(var(--text-primary))]">{formatNgn(summary.serviceFeeNgn)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4 text-[rgb(var(--text-secondary))]">
+            <span>Shipping invoice collected now</span>
+            <span className="font-medium text-[rgb(var(--text-primary))]">NGN 0</span>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-sm text-[rgb(var(--text-secondary))]">
-          <span>CNY to NGN rate</span>
-          <span>{summary.cnyToNgnRate.toLocaleString("en-NG")}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm text-[rgb(var(--text-secondary))]">
-          <span>Marketplace service fee</span>
-          <span>{formatNgn(summary.serviceFeeNgn)}</span>
-        </div>
-        <div className="flex items-center justify-between border-t border-[rgb(var(--border-subtle))] pt-4 text-base font-semibold text-[rgb(var(--text-primary))]">
+
+        <div className="flex items-center justify-between gap-4 text-base font-semibold text-[rgb(var(--text-primary))]">
           <span>Product payment due now</span>
           <span>{formatNgn(summary.payNowTotalNgn)}</span>
         </div>
-        <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-          Shipping is billed separately after warehouse measurement and proof upload. No logistics charge is collected
-          in this first payment.
-        </p>
-      </CardContent>
-    </Card>
+
+        <div className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-alt))] px-4 py-4 text-sm leading-6 text-[rgb(var(--text-secondary))]">
+          Shipping is billed separately and becomes payable only after warehouse measurement and proof upload create a real logistics invoice.
+        </div>
+      </div>
+    </section>
   );
 }

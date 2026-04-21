@@ -34,6 +34,10 @@ export async function startCheckoutPaymentAction(formData: FormData) {
     redirect(`/checkout?error=${encodeURIComponent("Your checkout cart is empty.")}`);
   }
 
+  if (cartItems.some((item) => item.quantity < item.effectiveMoq)) {
+    redirect(`/checkout?error=${encodeURIComponent("Cart quantities must satisfy each product MOQ before payment.")}`);
+  }
+
   const pendingOrder = await createRouteAcceptedOrderRecord({
     cartItems,
     consigneeId,
