@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { useStorefrontCurrency } from "@/components/storefront/currency-provider";
 import type { StorefrontProductRecord } from "@/lib/catalog/repository";
 import { cn } from "@/lib/utils";
@@ -25,7 +24,6 @@ const ledgerRows = [
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const { currency } = useStorefrontCurrency();
-  const router = useRouter();
   const displayedPrice = currency === "NGN" ? product.priceDisplayNgn : product.priceDisplay;
 
   return (
@@ -117,9 +115,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </div>
 
         <div className="grid gap-3">
-          <Button className="w-full" onClick={() => router.push("/cart")} size="lg" type="button">
+          <Link className={cn(buttonVariants({ size: "lg" }), "w-full")} href="/cart" role="button">
             Add to cart
-          </Button>
+          </Link>
           <Link className={cn(buttonVariants({ size: "lg" }), "w-full")} href="/checkout">
             Continue to checkout
           </Link>
