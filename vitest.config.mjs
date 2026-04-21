@@ -6,14 +6,21 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
-    exclude: ["tests/e2e/**", "node_modules/**"],
+    exclude: [
+      "tests/e2e/**",
+      "node_modules/**",
+      ".next/**",
+      ".worktrees/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./tests/setup.ts"]
+    setupFiles: ["./tests/setup.ts"],
   },
   resolve: {
     alias: {
-      "@": dirname
-    }
-  }
+      "@": dirname,
+    },
+  },
 });
