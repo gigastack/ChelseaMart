@@ -15,8 +15,7 @@ export default async function AdminImportJobDetailPage({ params }: ImportJobDeta
   const job = jobs.find((item) => item.id === jobId);
 
   return (
-    <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <section className="space-y-8">
         <div className="space-y-3">
           <Badge>Import job detail</Badge>
           <div className="space-y-2">
@@ -57,7 +56,6 @@ export default async function AdminImportJobDetailPage({ params }: ImportJobDeta
           </Card>
           <ImportLogPanel lines={lines.length ? lines : ["No activity yet."]} />
         </section>
-      </div>
-    </main>
+    </section>
   );
 }

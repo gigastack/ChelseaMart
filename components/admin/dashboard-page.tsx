@@ -1,6 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 type OverviewTile = {
   description: string;
@@ -12,81 +11,93 @@ type AdminDashboardPageProps = {
   overviewTiles: OverviewTile[];
 };
 
+const actionLinks = [
+  { href: "/admin/orders", label: "Orders and warehouse queue" },
+  { href: "/admin/products", label: "Catalog and publish readiness" },
+  { href: "/admin/bi", label: "BI and payment funnel" },
+];
+
 export function AdminDashboardPage({ overviewTiles }: AdminDashboardPageProps) {
   return (
-    <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <section className="space-y-8">
+      <div className="grid gap-6 border-b border-[rgba(var(--border-subtle),0.92)] pb-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+        <div className="space-y-3">
+          <Badge>Dashboard</Badge>
           <div className="space-y-3">
-            <Badge>Admin shell</Badge>
-            <div className="space-y-2">
-              <h1 className="text-4xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">
-                Operations control room
-              </h1>
-              <p className="max-w-3xl text-base leading-7 text-[rgb(var(--text-secondary))]">
-                Warehouse intake, customer invoicing, catalog readiness, and revenue split should all be readable from
-                the first screen. This dashboard now frames the two-phase commerce model instead of acting like a
-                placeholder.
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-2 text-sm text-[rgb(var(--text-secondary))] lg:text-right">
-            <Link className="font-medium text-[rgb(var(--brand-600))] underline-offset-4 hover:underline" href="/admin/orders">
-              Open warehouse queue
-            </Link>
-            <Link className="font-medium text-[rgb(var(--brand-600))] underline-offset-4 hover:underline" href="/admin/settings">
-              Review rates and MOQ
-            </Link>
+            <h1 className="max-w-4xl text-4xl font-semibold leading-[0.96] tracking-[-0.05em] text-[rgb(var(--text-primary))]">
+              One control surface for warehouse intake, catalog posture, and split-ledger health.
+            </h1>
+            <p className="max-w-3xl text-sm leading-7 text-[rgb(var(--text-secondary))]">
+              The admin home should answer three questions quickly: what is blocked, what is due, and which queue needs
+              an operator next.
+            </p>
           </div>
         </div>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-          <Card className="border-none bg-[linear-gradient(180deg,rgba(var(--brand-950),0.98)_0%,rgba(var(--brand-800),0.9)_100%)] text-[rgb(var(--surface-card))]">
-            <CardHeader>
-              <CardDescription className="text-[rgba(255,255,255,0.72)]">Live operating posture</CardDescription>
-              <CardTitle className="text-[rgb(var(--surface-card))]">
-                Product settlement and logistics settlement stay separated all the way through delivery.
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 text-sm leading-6 text-[rgba(255,255,255,0.82)] md:grid-cols-3">
-              <p>Catalog pricing remains native in CNY, with NGN shown only as the payable product-settlement view.</p>
-              <p>Warehouse measurement and proof are the authoritative trigger for the USD logistics invoice.</p>
-              <p>Admin settings now own the two active exchange rates and the global MOQ that new products inherit.</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardDescription>Priority links</CardDescription>
-              <CardTitle>Move directly to the queues that need action</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm">
-              <Link className="rounded-[var(--radius-md)] border border-[rgb(var(--border-subtle))] px-4 py-3 text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]" href="/admin/orders">
-                Orders and warehouse queue
-              </Link>
-              <Link className="rounded-[var(--radius-md)] border border-[rgb(var(--border-subtle))] px-4 py-3 text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]" href="/admin/products">
-                Catalog and publish readiness
-              </Link>
-              <Link className="rounded-[var(--radius-md)] border border-[rgb(var(--border-subtle))] px-4 py-3 text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]" href="/admin/bi">
-                BI and payment funnel
-              </Link>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {overviewTiles.map((tile) => (
-            <Card key={tile.title} className="border-none bg-[linear-gradient(180deg,rgba(var(--surface-card),0.98)_0%,rgba(var(--surface-alt),0.94)_100%)]">
-              <CardHeader>
-                <CardDescription>{tile.title}</CardDescription>
-                <CardTitle>{tile.value}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm leading-6 text-[rgb(var(--text-secondary))]">
-                <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">{tile.description}</p>
-              </CardContent>
-            </Card>
+        <div className="grid gap-3">
+          {actionLinks.map((link) => (
+            <Link
+              key={link.href}
+              className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] px-4 py-3 text-sm font-medium text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]"
+              href={link.href}
+            >
+              {link.label}
+            </Link>
           ))}
-        </section>
+        </div>
       </div>
-    </main>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <div
+          className="grid gap-5 rounded-[var(--radius-lg)] p-6 text-[rgb(var(--surface-card))]"
+          style={{
+            backgroundColor: "rgb(var(--brand-950))",
+            backgroundImage:
+              "linear-gradient(180deg, rgba(4, 47, 46, 1) 0%, rgba(9, 19, 31, 0.98) 100%)",
+          }}
+        >
+          <div className="space-y-2">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgba(255,255,255,0.72)]">Operating posture</p>
+            <h2 className="text-3xl font-semibold tracking-[-0.04em]">
+              Product settlement and logistics settlement stay separated all the way through delivery.
+            </h2>
+          </div>
+          <div className="grid gap-4 text-sm leading-7 text-[rgba(255,255,255,0.82)] md:grid-cols-3">
+            <p>Catalog pricing remains native in CNY, with NGN shown only as the payable product-settlement view.</p>
+            <p>Warehouse measurement and proof are the authoritative trigger for the USD logistics invoice.</p>
+            <p>Admin settings own the two live exchange rates and the global MOQ inherited by new products.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-6">
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--brand-600))]">Priority links</p>
+          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[rgb(var(--text-primary))]">Move directly to the queues that need action.</h2>
+          <div className="grid gap-3">
+            {actionLinks.map((link) => (
+              <Link
+                key={link.href}
+                className="rounded-[var(--radius-md)] border border-[rgba(var(--border-subtle),0.92)] px-4 py-3 text-sm text-[rgb(var(--text-primary))] transition-colors hover:bg-[rgb(var(--surface-alt))]"
+                href={link.href}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {overviewTiles.map((tile) => (
+          <article
+            key={tile.title}
+            className="grid gap-3 rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.92)] bg-[rgb(var(--surface-card))] p-5"
+          >
+            <h3 className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{tile.title}</h3>
+            <p className="text-3xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">{tile.value}</p>
+            <p className="text-sm leading-6 text-[rgb(var(--text-secondary))]">{tile.description}</p>
+          </article>
+        ))}
+      </section>
+    </section>
   );
 }

@@ -27,8 +27,7 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
   const updated = params.updated === "1";
 
   return (
-    <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <section className="space-y-8">
         <div className="space-y-3">
           <Badge>Settings</Badge>
           <div className="space-y-2">
@@ -106,7 +105,6 @@ export default async function AdminSettingsPage({ searchParams }: AdminSettingsP
             </div>
           </div>
         </div>
-      </div>
-    </main>
+    </section>
   );
 }

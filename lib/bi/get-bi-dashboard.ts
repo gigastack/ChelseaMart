@@ -31,6 +31,14 @@ export async function getBiDashboard({ from, to }: GetBiDashboardInput) {
     ["awaiting_warehouse", "arrived_at_warehouse", "weighed"].includes(order.status),
   ).length;
   const awaitingShippingInvoices = orders.filter((order) => order.shippingPaymentState === "pending").length;
+  const topProductsMap = new Map<string, number>();
+
+  orders.forEach((order) => {
+    order.items.forEach((item: { quantity: number; sellPriceNgn: number; title: string }) => {
+      const currentRevenue = topProductsMap.get(item.title) ?? 0;
+      topProductsMap.set(item.title, currentRevenue + item.sellPriceNgn * item.quantity);
+    });
+  });
 
   return {
     catalog: {
@@ -60,13 +68,11 @@ export async function getBiDashboard({ from, to }: GetBiDashboardInput) {
     },
     sales: {
       routeSplit,
-      topProducts: orders
-        .flatMap((order) =>
-          order.items.map((item: { quantity: number; sellPriceNgn: number; title: string }) => ({
-            revenueNgn: item.sellPriceNgn * item.quantity,
-            title: item.title,
-          })),
-        )
+      topProducts: Array.from(topProductsMap.entries())
+        .map(([title, revenueNgn]) => ({
+          revenueNgn,
+          title,
+        }))
         .sort((left, right) => right.revenueNgn - left.revenueNgn)
         .slice(0, 5),
     },

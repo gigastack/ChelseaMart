@@ -17,8 +17,7 @@ export default async function NewAdminProductPage({ searchParams }: NewAdminProd
 
   if (source === "manual") {
     return (
-      <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <section className="space-y-6">
           <div className="space-y-3">
             <Badge>Manual upload</Badge>
             <div className="space-y-2">
@@ -56,16 +55,13 @@ export default async function NewAdminProductPage({ searchParams }: NewAdminProd
               title="Product Image Sample"
             />
           </div>
-        </div>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[rgb(var(--surface-alt))] px-6 py-10 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <CreateProductSourcePicker />
-      </div>
-    </main>
+    <section>
+      <CreateProductSourcePicker />
+    </section>
   );
 }
