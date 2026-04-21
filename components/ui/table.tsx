@@ -3,14 +3,14 @@ import { cn } from "@/lib/utils";
 
 export function DataTable({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))]">
+    <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[rgba(var(--border-subtle),0.95)] bg-[rgba(var(--surface-card),0.96)] shadow-[0_24px_70px_rgba(4,47,46,0.08)] backdrop-blur">
       <table className={cn("w-full border-collapse text-left", className)} {...props} />
     </div>
   );
 }
 
 export function DataTableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("bg-[rgb(var(--surface-alt))]", className)} {...props} />;
+  return <thead className={cn("bg-[rgba(var(--surface-alt),0.9)]", className)} {...props} />;
 }
 
 export function DataTableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
@@ -18,7 +18,7 @@ export function DataTableBody({ className, ...props }: HTMLAttributes<HTMLTableS
 }
 
 export function DataTableRow({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-[rgb(var(--border-subtle))] transition-colors hover:bg-[rgb(var(--surface-alt))]", className)} {...props} />;
+  return <tr className={cn("border-b border-[rgb(var(--border-subtle))] transition-colors hover:bg-[rgba(var(--surface-alt),0.82)]", className)} {...props} />;
 }
 
 export function DataTableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {

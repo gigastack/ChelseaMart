@@ -18,15 +18,27 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
   const user = hasSupabaseAuthEnv() ? await requireAuthenticatedUser("/account/orders") : null;
 
   return (
-    <main className="bg-[rgb(var(--surface-base))]">
-      <section className="mx-auto max-w-7xl space-y-8 px-6 py-12 lg:px-12">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <nav className="flex flex-wrap gap-3">
+    <section className="mx-auto max-w-[var(--max-shell)] px-6 py-10 lg:px-10 lg:py-12">
+      <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
+        <aside className="space-y-6 rounded-[var(--radius-lg)] border border-[rgb(var(--border-subtle))] bg-[rgba(var(--surface-card),0.88)] p-6 shadow-[0_24px_70px_rgba(4,47,46,0.08)] backdrop-blur">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[rgb(var(--brand-600))]">Service center</p>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-[-0.05em] text-[rgb(var(--text-primary))]">
+                Keep product receipts, warehouse proof, and shipping actions in one place.
+              </h1>
+              <p className="text-sm leading-7 text-[rgb(var(--text-secondary))]">
+                This account mode is built around post-purchase clarity, not generic profile settings.
+              </p>
+            </div>
+          </div>
+
+          <nav className="grid gap-2">
             {accountLinks.map((link) => (
               <Link
                 key={link.href}
                 className={cn(
-                  "rounded-full border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] px-4 py-2 text-sm font-medium text-[rgb(var(--text-secondary))]",
+                  "rounded-[var(--radius-md)] border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-base))] px-4 py-3 text-sm font-medium text-[rgb(var(--text-secondary))] transition-colors hover:border-[rgb(var(--border-strong))] hover:text-[rgb(var(--text-primary))]",
                 )}
                 href={link.href}
               >
@@ -34,15 +46,17 @@ export default async function AccountLayout({ children }: AccountLayoutProps) {
               </Link>
             ))}
           </nav>
+
           {user?.email ? (
-            <div className="flex items-center gap-3">
+            <div className="space-y-3 border-t border-[rgb(var(--border-subtle))] pt-4">
               <p className="text-sm text-[rgb(var(--text-secondary))]">{user.email}</p>
               <SignOutForm size="sm" variant="secondary" />
             </div>
           ) : null}
-        </div>
-        {children}
-      </section>
-    </main>
+        </aside>
+
+        <div className="min-w-0">{children}</div>
+      </div>
+    </section>
   );
 }

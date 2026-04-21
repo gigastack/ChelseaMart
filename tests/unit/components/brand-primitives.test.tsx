@@ -26,8 +26,8 @@ describe("brand primitives", () => {
 
     const button = screen.getByRole("button", { name: /publish product/i });
     expect(button).toHaveAttribute("type", "button");
-    expect(button.className).toContain("bg-[rgb(var(--brand-950))]");
-    expect(button.className).toContain("text-[rgb(var(--surface-card))]");
+    expect(button.className).toContain("bg-[rgb(var(--brand-500))]");
+    expect(button.className).toContain("text-[rgb(var(--brand-950))]");
     expect(button.className).toContain("rounded-[var(--radius-md)]");
   });
 
@@ -53,8 +53,8 @@ describe("brand primitives", () => {
     render(<Input aria-label="Product name" placeholder="Product name" />);
 
     const input = screen.getByRole("textbox", { name: /product name/i });
-    expect(input.className).toContain("border-[rgb(var(--border-subtle))]");
-    expect(input.className).toContain("bg-[rgb(var(--surface-card))]");
+    expect(input.className).toContain("border-[rgba(var(--border-strong),0.65)]");
+    expect(input.className).toContain("bg-[rgba(var(--surface-card),0.94)]");
   });
 
   it("renders badges and skeletons for status-driven interfaces", () => {
@@ -65,7 +65,7 @@ describe("brand primitives", () => {
       </>,
     );
 
-    expect(screen.getByText("Draft").className).toContain("bg-[rgb(var(--surface-alt))]");
+    expect(screen.getByText("Draft").className).toContain("bg-[rgba(var(--surface-card),0.88)]");
     expect(screen.getByTestId("loading-card").className).toContain("animate-pulse");
   });
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AdminShell } from "@/components/admin/admin-shell";
 import { requireAdminUser } from "@/lib/auth/guards";
 import { hasSupabaseAuthEnv } from "@/lib/config/env";
 
@@ -11,5 +12,5 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
     await requireAdminUser("/account/orders");
   }
 
-  return children;
+  return <AdminShell>{children}</AdminShell>;
 }

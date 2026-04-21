@@ -10,9 +10,11 @@ type StorefrontLayoutProps = {
 export default function StorefrontLayout({ children }: StorefrontLayoutProps) {
   return (
     <StorefrontCurrencyProvider>
-      <StorefrontHeader />
-      {children}
-      <StorefrontFooter />
+      <div className="relative isolate min-h-screen overflow-x-clip">
+        <StorefrontHeader />
+        <div className="relative z-[1]">{children}</div>
+        <StorefrontFooter />
+      </div>
     </StorefrontCurrencyProvider>
   );
 }

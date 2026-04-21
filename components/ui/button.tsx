@@ -7,10 +7,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-[rgb(var(--brand-950))] text-[rgb(var(--surface-card))] hover:bg-[rgb(var(--brand-800))]",
+        primary:
+          "bg-[rgb(var(--brand-500))] text-[rgb(var(--brand-950))] shadow-[0_18px_40px_rgba(20,184,166,0.22)] hover:bg-[rgb(var(--brand-600))] hover:text-[rgb(var(--surface-card))]",
         secondary:
-          "border border-[rgb(var(--border-subtle))] bg-[rgb(var(--surface-card))] text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--surface-alt))]",
-        ghost: "text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--surface-alt))]",
+          "border border-[rgba(var(--border-strong),0.7)] bg-[rgba(var(--surface-card),0.92)] text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--surface-alt))]",
+        ghost: "text-[rgb(var(--text-primary))] hover:bg-[rgba(var(--surface-strong),0.72)]",
         danger: "bg-[rgb(var(--danger))] text-[rgb(var(--surface-card))] hover:opacity-90",
       },
       size: {
